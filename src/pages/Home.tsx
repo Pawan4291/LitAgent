@@ -206,7 +206,8 @@ export default function Home() {
   if (!scheduleAction?.to) return;
   addAgentMessage(`⏳ Depositing ${totalAmount} zkLTC for ${cycles} cycles...`);
   const label = `${scheduleAction.amount} zkLTC every ${intervalSeconds}s`;
-  const result = await createOnChainJob(scheduleAction.to, intervalSeconds, totalAmount, cycles, label);
+ const cleanAmount = totalAmount.toString().replace(/[^0-9.]/g, '');
+const result = await createOnChainJob(scheduleAction.to, intervalSeconds, cleanAmount, cycles, label);
   if (result.success) {
     addAgentMessage(`✅ Scheduled! ${cycles} payments locked.\n\nTx: \`${result.hash}\``);
   } else {
