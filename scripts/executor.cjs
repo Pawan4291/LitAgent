@@ -1,35 +1,34 @@
 const { ethers } = require('ethers');
 require('dotenv').config();
 
+const UPSTASH_URL = process.env.UPSTASH_REDIS_REST_URL;
+const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+async function getWallets() {
+  const res = await fetch(`${UPSTASH_URL}/smembers/wallets`, {
+    headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` }
+  });
+  const data = await res.json();
+  return data.result || [];
+}
+
 const provider = new ethers.JsonRpcProvider('https://liteforge.rpc.caldera.xyz/http');
 const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 
 const CONTRACT = '0xA4Cf50f8B85e4C4d0459F6CBE11D6D51568B89D7';
 const ABI = [
   "function execute(address owner, uint256 jobId) external",
-  "function getJobs(address owner) view returns (tuple(address to, uint256 amount, uint256 nextRun, uint256 interval, uint256 maxCycles, uint256 executedCycles, bool active, string label)[])",
-  "event JobCreated(address indexed owner, uint256 jobId, address to, uint256 amount, uint256 interval, uint256 maxCycles)"
+  "function getJobs(address owner) view returns (tuple(address to, uint256 amount, uint256 nextRun, uint256 interval, uint256 maxCycles, uint256 executedCycles, bool active, string label)[])"
 ];
 
 const contract = new ethers.Contract(CONTRACT, ABI, wallet);
-const knownOwners = new Set();
-
-async function discoverOwners() {
-  try {
-    const filter = contract.filters.JobCreated();
-    const events = await contract.queryFilter(filter, 0, 'latest');
-    events.forEach(e => knownOwners.add(e.args.owner));
-    console.log(`👥 Tracking ${knownOwners.size} wallets`);
-  } catch (e) {
-    console.error('Discover error:', e.message);
-  }
-}
 
 async function run() {
-  await discoverOwners(); // ← move here, runs every 30 sec
+  const wallets = await getWallets();
+  console.log(`👥 Checking ${wallets.length} wallets`);
   const now = Math.floor(Date.now() / 1000);
 
-  for (const owner of knownOwners) {
+  for (const owner of wallets) {
     try {
       const jobs = await contract.getJobs(owner);
       for (let i = 0; i < jobs.length; i++) {
@@ -49,4 +48,4 @@ async function run() {
 
 run();
 setInterval(run, 30000);
-console.log('🤖 Executor running — watching all wallets...');
+console.log('🤖 Executor running...');

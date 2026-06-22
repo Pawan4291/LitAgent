@@ -263,3 +263,14 @@ export async function getOnChainHistory(ownerAddress: string): Promise<any[]> {
     return [];
   }
 }
+export async function registerWallet(address: string): Promise<void> {
+  try {
+    await fetch(`${import.meta.env.VITE_EXECUTOR_API}/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ address })
+    });
+  } catch (e) {
+    console.error('Register wallet error:', e);
+  }
+}

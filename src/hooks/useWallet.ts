@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { getBalance, switchToLitVM } from '../services/ethers';
+import { getBalance, switchToLitVM, registerWallet } from '../services/ethers';
 import { LITVM_CHAIN } from '../config/litvm';
 
 export interface WalletState {
@@ -64,6 +64,8 @@ const updateBalance = useCallback(async (address: string) => {
       }));
 
       await updateBalance(account);
+      await updateBalance(account);
+await registerWallet(account); // ← add here
 
       // Auto-switch if wrong chain
       if (!isCorrectChain) {
