@@ -1,26 +1,37 @@
 const { ethers } = require('ethers');
 require('dotenv').config();
+
 const provider = new ethers.JsonRpcProvider('https://liteforge.rpc.caldera.xyz/http');
 const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 
 const CONTRACT = '0xA4Cf50f8B85e4C4d0459F6CBE11D6D51568B89D7';
 const ABI = [
   "function execute(address owner, uint256 jobId) external",
-  "function getJobs(address owner) view returns (tuple(address to, uint256 amount, uint256 nextRun, uint256 interval, uint256 maxCycles, uint256 executedCycles, bool active, string label)[])"
+  "function getJobs(address owner) view returns (tuple(address to, uint256 amount, uint256 nextRun, uint256 interval, uint256 maxCycles, uint256 executedCycles, bool active, string label)[])",
+  "event JobCreated(address indexed owner, uint256 jobId, address to, uint256 amount, uint256 interval, uint256 maxCycles)"
 ];
 
-const WATCHED_WALLETS = [
-  '0xe164c2e603c3698d2eda9c456f640a5880a0eaff' // your wallet
-];
+const contract = new ethers.Contract(CONTRACT, ABI, wallet);
+const knownOwners = new Set();
+
+async function discoverOwners() {
+  try {
+    const filter = contract.filters.JobCreated();
+    const events = await contract.queryFilter(filter, 0, 'latest');
+    events.forEach(e => knownOwners.add(e.args.owner));
+    console.log(`👥 Tracking ${knownOwners.size} wallets`);
+  } catch (e) {
+    console.error('Discover error:', e.message);
+  }
+}
 
 async function run() {
-  const contract = new ethers.Contract(CONTRACT, ABI, wallet);
-  
-  for (const owner of WATCHED_WALLETS) {
+  await discoverOwners();
+  const now = Math.floor(Date.now() / 1000);
+
+  for (const owner of knownOwners) {
     try {
       const jobs = await contract.getJobs(owner);
-      const now = Math.floor(Date.now() / 1000);
-      
       for (let i = 0; i < jobs.length; i++) {
         const job = jobs[i];
         if (job.active && BigInt(now) >= job.nextRun) {
@@ -36,7 +47,6 @@ async function run() {
   }
 }
 
-// Run every 30 seconds
 run();
 setInterval(run, 30000);
-console.log('🤖 Executor running...');
+console.log('🤖 Executor running — watching all wallets...');

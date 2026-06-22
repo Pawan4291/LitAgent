@@ -174,8 +174,9 @@ export async function createOnChainJob(
     const iface = new ethers.Interface([
       "function createJob(address _to, uint256 _interval, uint256 _maxCycles, string _label) payable"
     ]);
+    const checksummedAddress = ethers.getAddress(toAddress);
     const data = iface.encodeFunctionData('createJob', [
-      toAddress,
+  toAddress, 
       BigInt(intervalSeconds),
       BigInt(maxCycles),
       label
