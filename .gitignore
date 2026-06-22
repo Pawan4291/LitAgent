@@ -1,6 +1,5 @@
 .env
 hardhat.config.cjs
 scripts/deploy.cjs
-scripts/executor.cjs
 node_modules
 dist
