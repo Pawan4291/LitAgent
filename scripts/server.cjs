@@ -54,8 +54,8 @@ const server = http.createServer(async (req, res) => {
   res.end('Not found');
 });
 
-server.listen(process.env.PORT || 3001, () => {
-  console.log(`🚀 API server running on port ${process.env.PORT || 3001}`);
+server.listen(process.env.PORT || 8080, () => {
+  console.log(`🚀 API server running on port ${process.env.PORT || 8080}`);
 });
 
 module.exports = { getWallets };
