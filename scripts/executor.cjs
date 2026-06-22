@@ -26,7 +26,7 @@ async function discoverOwners() {
 }
 
 async function run() {
-  await discoverOwners();
+  await discoverOwners(); // ← move here, runs every 30 sec
   const now = Math.floor(Date.now() / 1000);
 
   for (const owner of knownOwners) {
