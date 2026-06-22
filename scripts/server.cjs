@@ -54,7 +54,7 @@ const server = http.createServer(async (req, res) => {
   res.end('Not found');
 });
 
-server.listen(process.env.PORT || 8080, () => {
+server.listen(process.env.PORT || 8080, '0.0.0.0', () => {
   console.log(`🚀 API server running on port ${process.env.PORT || 8080}`);
 });
 
