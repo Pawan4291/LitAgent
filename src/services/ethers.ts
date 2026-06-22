@@ -265,7 +265,7 @@ export async function getOnChainHistory(ownerAddress: string): Promise<any[]> {
 }
 export async function registerWallet(address: string): Promise<void> {
   try {
-    await fetch(`${import.meta.env.VITE_EXECUTOR_API}/register`, {
+    await fetch(`${import.meta.env.VITE_EXECUTOR_API}/api/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ address })
