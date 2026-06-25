@@ -1,13 +1,12 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Wallet, ChevronDown, Copy, ExternalLink, LogOut, Zap, AlertTriangle } from 'lucide-react';
 import { useState } from 'react';
-import { useWallet } from '../hooks/useWallet';
+import { useWalletContext } from './WalletContext';
 import { truncateAddress, switchToLitVM } from '../services/ethers';
 import { LITVM_CHAIN } from '../config/litvm';
 
 export default function WalletConnect() {
-  const { account, balance, isConnected, isConnecting, isCorrectChain, error, connect, disconnect, refreshBalance } =
-    useWallet();
+  const { account, balance, isConnected, isConnecting, isCorrectChain, error, connect, disconnect, refreshBalance } = useWalletContext();
   const [showDropdown, setShowDropdown] = useState(false);
   const [copied, setCopied] = useState(false);
 

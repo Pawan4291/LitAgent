@@ -36,7 +36,7 @@ export async function sendZkLTC(
     const provider = new ethers.BrowserProvider(window.ethereum);
     const signer = await provider.getSigner();
 
-    const value = ethers.parseEther(amount);
+    const value = ethers.parseEther(String(amount));
     const gasPrice = await provider.getFeeData();
 
     const tx = await signer.sendTransaction({

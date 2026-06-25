@@ -5,7 +5,7 @@ import Home from './pages/Home';
 import History from './pages/History';
 import Automations from './pages/Automations';
 import Settings from './pages/Settings';
-
+import { WalletProvider } from './components/WalletContext';
 function AnimatedBackground() {
   return (
     <div className="fixed inset-0 overflow-hidden pointer-events-none" style={{ zIndex: -2 }}>
@@ -125,6 +125,7 @@ function AnimatedBackground() {
 export default function App() {
   return (
     <Router>
+      <WalletProvider>
       <AnimatedBackground />
       <div className="min-h-screen relative">
         <Navbar />
@@ -137,6 +138,7 @@ export default function App() {
           </Routes>
         </main>
       </div>
+      </WalletProvider>
     </Router>
   );
 }

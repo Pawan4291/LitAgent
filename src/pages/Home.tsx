@@ -7,7 +7,7 @@ import ChatInput from '../components/ChatInput';
 import AgentResponse from '../components/AgentResponse';
 import ConfirmModal from '../components/ConfirmModal';
 import NetworkStatus from '../components/NetworkStatus';
-import { useWallet } from '../hooks/useWallet';
+import { useWalletContext } from '../components/WalletContext';
 import { useAgent } from '../hooks/useAgent';
 import { useTransactions } from '../hooks/useTransactions';
 import { sendZkLTC, estimateGas, isValidAddress } from '../services/ethers';
@@ -26,7 +26,7 @@ const WELCOME_MESSAGES = [
 export default function Home() {
   const [showSchedule, setShowSchedule] = useState(false);
   const [scheduleAction, setScheduleAction] = useState<AgentAction | null>(null);
-  const wallet = useWallet();
+ const wallet = useWalletContext();
   const { messages, isThinking, processMessage, addAgentMessage, clearHistory } = useAgent();
   const { transactions, fetchTransactions } = useTransactions();
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -61,8 +61,13 @@ export default function Home() {
     async (userMessage: string) => {
       if (!wallet.isConnected) return;
 
-      const action = await processMessage(userMessage, wallet.account || '', wallet.balance);
+     const action = await processMessage(userMessage, wallet.account || '', wallet.balance);
       if (!action) return;
+
+      const isScheduleIntent = /every|daily|weekly|monthly|recurring|repeat|schedule|automate/i.test(userMessage);
+      if (isScheduleIntent && action.action === 'send') {
+        action.action = 'schedule';
+      }
 
       const settings = JSON.parse(localStorage.getItem(STORAGE_KEYS.SETTINGS) || '{}');
 
@@ -122,14 +127,14 @@ export default function Home() {
           break;
         }
 
-        case 'schedule': {
-  if (!action.to || !action.amount) {
-    addAgentMessage("❌ Need address and amount.");
-    return;
-  }
+       case 'schedule': {
   setScheduleAction(action);
   setShowSchedule(true);
-  addAgentMessage(`⏰ Opening schedule builder for **${action.amount} zkLTC** to \`${action.to?.slice(0,8)}...\``);
+  if (!action.to || !action.amount) {
+    addAgentMessage(`⏰ Opening schedule builder! Please fill in the address and amount in the form.`, action);
+  } else {
+    addAgentMessage(`⏰ Opening schedule builder for **${action.amount} zkLTC** to \`${action.to?.slice(0,8)}...\``, action);
+  }
   break;
 }
 
@@ -193,7 +198,14 @@ export default function Home() {
     await executeAction(pendingAction);
   };
 
-  const handleCancel = () => {
+ const handleCancel = () => {
+    setShowConfirm(false);
+    setPendingAction(null);
+    setTxResult(null);
+    setIsExecuting(false);
+    addAgentMessage('❌ Transaction cancelled by user.');
+  };
+  const handleClose = () => {
     setShowConfirm(false);
     setPendingAction(null);
     setTxResult(null);
@@ -208,8 +220,13 @@ export default function Home() {
   const label = `${scheduleAction.amount} zkLTC every ${intervalSeconds}s`;
  const cleanAmount = totalAmount.toString().replace(/[^0-9.]/g, '');
 const result = await createOnChainJob(scheduleAction.to, intervalSeconds, cleanAmount, cycles, label);
-  if (result.success) {
-    addAgentMessage(`✅ Scheduled! ${cycles} payments locked.\n\nTx: \`${result.hash}\``);
+ if (result.success) {
+addAgentMessage(
+  `✅ Scheduled! ${cycles} payments locked.\n\nTx: \`${result.hash}\``,
+  undefined,
+  result.hash,
+  'confirmed'
+);
   } else {
     addAgentMessage(`❌ Failed: ${result.error}`);
   }
@@ -331,15 +348,7 @@ const result = await createOnChainJob(scheduleAction.to, intervalSeconds, cleanA
           ) : (
             <motion.div key="messages" className="space-y-4">
               {/* Clear history button */}
-              <div className="flex justify-end">
-                <button
-                  onClick={clearHistory}
-                  className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-red-500 transition-colors"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  Clear chat
-                </button>
-              </div>
+              
 
               {messages.map((msg, i) => (
                 <AgentResponse key={msg.id} message={msg} index={i} />
@@ -378,32 +387,34 @@ const result = await createOnChainJob(scheduleAction.to, intervalSeconds, cleanA
       </div>
 
       {/* Input area */}
-      <div
-        className="flex-shrink-0 px-4 py-4 md:px-8 pb-20 md:pb-4"
-        style={{
-          background: 'linear-gradient(to top, rgba(248,250,252,0.95) 70%, transparent)',
-          backdropFilter: 'blur(10px)',
-        }}
-      >
-        <div className="max-w-3xl mx-auto">
-          <ChatInput
-            onSend={handleSend}
-            isLoading={isThinking || isExecuting}
-            isConnected={wallet.isConnected}
-          />
-        </div>
-      </div>
+<div
+  className="flex-shrink-0 px-4 py-4 md:px-8 pb-20 md:pb-4"
+  style={{
+    background: 'linear-gradient(to top, rgba(248,250,252,0.95) 70%, transparent)',
+    backdropFilter: 'blur(10px)',
+  }}
+>
+  <div className="max-w-3xl mx-auto">
+    <ChatInput
+      onSend={handleSend}
+      isLoading={isThinking || isExecuting}
+      isConnected={wallet.isConnected}
+      onClearHistory={clearHistory}
+      hasMessages={hasMessages}
+    />
+  </div>
+</div>
 
       {/* Confirm modal */}
-      <ConfirmModal
-        isOpen={showConfirm}
-        action={pendingAction}
-        estimatedGas={estimatedGas}
-        isExecuting={isExecuting}
-        txResult={txResult}
-        onConfirm={handleConfirm}
-        onCancel={handleCancel}
-      />
+     <ConfirmModal
+  isOpen={showConfirm}
+  action={pendingAction}
+  estimatedGas={estimatedGas}
+  isExecuting={isExecuting}
+  txResult={txResult}
+  onConfirm={handleConfirm}
+  onCancel={txResult?.success ? handleClose : handleCancel}
+/>
       <ScheduleModal
   isOpen={showSchedule}
   toAddress={scheduleAction?.to || ''}

@@ -1,11 +1,13 @@
 import { useState, useRef, KeyboardEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Mic, Sparkles, ChevronDown } from 'lucide-react';
+import { Send, Mic, Sparkles, ChevronDown, Trash2 } from 'lucide-react';
 
 interface ChatInputProps {
   onSend: (message: string) => void;
   isLoading?: boolean;
   isConnected?: boolean;
+  onClearHistory?: () => void;
+  hasMessages?: boolean;
 }
 
 const QUICK_COMMANDS = [
@@ -16,7 +18,7 @@ const QUICK_COMMANDS = [
   { label: '❓ Help', command: 'What can you do?' },
 ];
 
-export default function ChatInput({ onSend, isLoading, isConnected }: ChatInputProps) {
+export default function ChatInput({ onSend, isLoading, isConnected, onClearHistory, hasMessages }: ChatInputProps) {
   const [input, setInput] = useState('');
   const [showQuick, setShowQuick] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -38,7 +40,6 @@ export default function ChatInput({ onSend, isLoading, isConnected }: ChatInputP
 
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
-    // Auto-resize
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
       textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
@@ -47,11 +48,11 @@ export default function ChatInput({ onSend, isLoading, isConnected }: ChatInputP
 
   return (
     <div className="space-y-3">
-      {/* Quick commands */}
-      <div className="flex items-center gap-2">
+      {/* Quick commands row */}
+      <div className="flex items-center gap-2 w-full">
         <button
           onClick={() => setShowQuick(!showQuick)}
-          className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-xl bg-white/80 border border-slate-200 text-slate-500 hover:text-blue-600 hover:border-blue-300 transition-all"
+          className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-xl bg-white/80 border border-slate-200 text-slate-500 hover:text-blue-600 hover:border-blue-300 transition-all flex-shrink-0"
         >
           <Sparkles className="w-3 h-3" />
           Quick Commands
@@ -82,6 +83,17 @@ export default function ChatInput({ onSend, isLoading, isConnected }: ChatInputP
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Clear chat — same row, right side */}
+        {hasMessages && onClearHistory && !showQuick && (
+          <button
+            onClick={onClearHistory}
+            className="flex items-center gap-1 text-xs text-slate-400 hover:text-red-500 transition-colors ml-auto flex-shrink-0"
+          >
+            <Trash2 className="w-3 h-3" />
+            Clear chat
+          </button>
+        )}
       </div>
 
       {/* Main input */}
@@ -100,12 +112,14 @@ export default function ChatInput({ onSend, isLoading, isConnected }: ChatInputP
             value={input}
             onChange={handleInput}
             onKeyDown={handleKeyDown}
-            disabled={isLoading}
-           placeholder={
-  isLoading
-    ? '🤔 LitAgent is thinking...'
-    : '💬 Ask LitAgent anything — "Send 0.1 zkLTC to 0x..." or "What\'s my balance?"'
-}
+            disabled={isLoading || !isConnected}
+            placeholder={
+              !isConnected
+                ? '🔗 Connect your wallet to start...'
+                : isLoading
+                ? '🤔 LitAgent is thinking...'
+                : '💬 Ask LitAgent anything — "Send 0.1 zkLTC to 0x..." or "What\'s my balance?"'
+            }
             rows={1}
             className="w-full bg-transparent text-slate-800 placeholder-slate-400 text-sm font-medium resize-none outline-none leading-relaxed"
             style={{ minHeight: '28px', maxHeight: '120px' }}
@@ -113,7 +127,6 @@ export default function ChatInput({ onSend, isLoading, isConnected }: ChatInputP
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">
-          {/* Voice hint */}
           <button
             className="p-2 rounded-xl text-slate-400 hover:text-blue-500 hover:bg-blue-50 transition-all"
             title="Voice input (coming soon)"
@@ -121,7 +134,6 @@ export default function ChatInput({ onSend, isLoading, isConnected }: ChatInputP
             <Mic className="w-4 h-4" />
           </button>
 
-          {/* Send button */}
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
