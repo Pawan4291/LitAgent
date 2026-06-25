@@ -100,14 +100,12 @@ export default function ChatInput({ onSend, isLoading, isConnected }: ChatInputP
             value={input}
             onChange={handleInput}
             onKeyDown={handleKeyDown}
-            disabled={isLoading || !isConnected}
-            placeholder={
-              !isConnected
-                ? '🔗 Connect your wallet to start...'
-                : isLoading
-                ? '🤔 LitAgent is thinking...'
-                : '💬 Ask LitAgent anything — "Send 0.1 zkLTC to 0x..." or "What\'s my balance?"'
-            }
+            disabled={isLoading}
+           placeholder={
+  isLoading
+    ? '🤔 LitAgent is thinking...'
+    : '💬 Ask LitAgent anything — "Send 0.1 zkLTC to 0x..." or "What\'s my balance?"'
+}
             rows={1}
             className="w-full bg-transparent text-slate-800 placeholder-slate-400 text-sm font-medium resize-none outline-none leading-relaxed"
             style={{ minHeight: '28px', maxHeight: '120px' }}
