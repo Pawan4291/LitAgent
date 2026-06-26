@@ -9,36 +9,36 @@ import { LITVM_CHAIN } from '../config/litvm';
 
 export default function Automations() {
   const [contractBalance, setContractBalance] = useState('0');
-  const [withdrawn, setWithdrawn] = useState(false);
   const wallet = useWallet();
   const [withdrawing, setWithdrawing] = useState(false);
   const [jobs, setJobs] = useState<ScheduledJob[]>([]);
-  const [onChainJobs, setOnChainJobs] = useState<any[]>([]);
+  const [onChainJobs, setOnChainJobs] = useState<{job: any, originalIndex: number}[]>([]);
   const [runningJob, setRunningJob] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState<number | null>(null);
   const [recentRuns, setRecentRuns] = useState<{ id: string; hash: string; success: boolean; ts: number }[]>([]);
-const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
   const refresh = useCallback(() => setJobs(loadJobs()), []);
 
   const refreshOnChain = useCallback(async () => {
-  if (!wallet.account) return;
-const j = await getOnChainJobs(wallet.account);
-setOnChainJobs(Array.from(j).sort((a: any, b: any) => (b.active ? 1 : 0) - (a.active ? 1 : 0)));
-  // Check contract balance
-  const provider = new ethers.JsonRpcProvider('https://liteforge.rpc.caldera.xyz/http');
-  const bal = await provider.getBalance(import.meta.env.VITE_SCHEDULER_CONTRACT);
-  setContractBalance(ethers.formatEther(bal));
-}, [wallet.account]);
-
-  
+    if (!wallet.account) return;
+    try {
+      const j = await getOnChainJobs(wallet.account);
+      const withIndex = Array.from(j).map((job: any, i: number) => ({ job, originalIndex: i }));
+      withIndex.sort((a: any, b: any) => (b.job.active ? 1 : 0) - (a.job.active ? 1 : 0));
+      setOnChainJobs(withIndex);
+      const provider = new ethers.JsonRpcProvider('https://liteforge.rpc.caldera.xyz/http');
+      const bal = await provider.getBalance(import.meta.env.VITE_SCHEDULER_CONTRACT);
+      setContractBalance(ethers.formatEther(bal));
+    } catch (e) {
+      console.error('refreshOnChain error:', e);
+    }
+  }, [wallet.account]);
 
   useEffect(() => {
     refresh();
     refreshOnChain();
-    const interval = setInterval(() => {
-      refresh();
-      refreshOnChain();
-    }, 30000);
+    const interval = setInterval(() => { refresh(); refreshOnChain(); }, 30000);
     return () => clearInterval(interval);
   }, [refresh, refreshOnChain]);
 
@@ -63,42 +63,62 @@ setOnChainJobs(Array.from(j).sort((a: any, b: any) => (b.active ? 1 : 0) - (a.ac
     return () => clearInterval(interval);
   }, [wallet.isConnected, wallet.account, runningJob, refresh]);
 
-  const handleCancel = async (jobId: number) => {
-    setCancelling(jobId);
-    const result = await cancelOnChainJob(jobId);
-    if (result.success) await refreshOnChain();
-    setCancelling(null);
+ const handleCancel = async (originalIndex: number) => {
+    try {
+      setCancelling(originalIndex);
+      const result = await cancelOnChainJob(originalIndex);
+      if (result.success) {
+        setOnChainJobs(prev => prev.map(item =>
+          item.originalIndex === originalIndex
+            ? { ...item, job: { ...item.job, active: false } }
+            : item
+        ));
+        await refreshOnChain();
+      } else {
+        console.error('Cancel failed:', result.error);
+      }
+    } catch (e: any) {
+      console.error('handleCancel error:', e);
+    } finally {
+      setCancelling(null);
+    }
   };
 
-  
+  const handleWithdraw = async () => {
+    setWithdrawing(true);
+    try {
+      const result = await withdrawFromContract();
+      if (result.success) {
+        setContractBalance('0');
+        await new Promise(r => setTimeout(r, 3000));
+        await refreshOnChain();
+      }
+    } catch (e) { console.error(e); }
+    finally { setWithdrawing(false); }
+  };
 
-const handleWithdraw = async () => {
-  setWithdrawing(true);
-  const result = await withdrawFromContract();
-  if (result.success) {
-    setWithdrawn(true);
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    refresh();
     await refreshOnChain();
-  }
-  setWithdrawing(false);
+    setIsRefreshing(false);
+  };
+
+ const formatTime = (ts: any) => {
+  try { return new Date(Number(ts) * 1000).toLocaleString(); } catch { return '—'; }
 };
 
-const handleRefresh = async () => {
-  setIsRefreshing(true);
-  refresh();
-  await refreshOnChain();
-  setIsRefreshing(false);
-};
-
-  const formatTime = (ts: bigint) => new Date(Number(ts) * 1000).toLocaleString();
-
-  const formatInterval = (s: bigint) => {
+const formatInterval = (s: any) => {
+  try {
     const n = Number(s);
+    if (!n || isNaN(n)) return '—';
     if (n < 3600) return `Every ${n / 60} min`;
     if (n < 86400) return `Every ${n / 3600} hr`;
     if (n < 604800) return `Every ${n / 86400} day`;
     if (n < 2592000) return `Every ${n / 604800} week`;
     return `Every ${n / 2592000} month`;
-  };
+  } catch { return '—'; }
+};
 
   const getStatus = (job: any) => {
     if (job.active) return 'ACTIVE';
@@ -112,10 +132,13 @@ const handleRefresh = async () => {
     return 'bg-slate-400 text-white';
   };
 
+  const hasInactiveJobs = onChainJobs.some(item => !item.job.active);
+
   return (
     <div className="min-h-screen px-4 py-6 md:px-8 pb-28 md:pb-8">
       <div className="max-w-3xl mx-auto space-y-6">
-<div className="flex items-center justify-between">
+
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl flex items-center justify-center shadow-md" style={{ background: 'linear-gradient(135deg, #f59e0b, #f97316)' }}>
               <Clock className="w-5 h-5 text-white" />
@@ -135,7 +158,7 @@ const handleRefresh = async () => {
           </button>
         </div>
 
-      {onChainJobs.some(j => !j.active) && (
+        {hasInactiveJobs && (
           parseFloat(contractBalance) > 0 ? (
             <button onClick={handleWithdraw} disabled={withdrawing}
               className="w-full py-3 rounded-2xl text-white font-bold text-sm disabled:opacity-50"
@@ -152,7 +175,7 @@ const handleRefresh = async () => {
         <div className="grid grid-cols-3 gap-3">
           {[
             { label: 'On-Chain Jobs', value: onChainJobs.length },
-            { label: 'Active', value: onChainJobs.filter(j => j.active).length },
+            { label: 'Active', value: onChainJobs.filter(item => item.job.active).length },
             { label: 'Local Jobs', value: jobs.length },
           ].map((s, i) => (
             <motion.div key={s.label} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.1 }}
@@ -171,25 +194,21 @@ const handleRefresh = async () => {
             <p className="text-sm text-slate-400 text-center py-6">No on-chain jobs yet. Tell LitAgent to schedule a payment.</p>
           ) : (
             <div className="space-y-3">
-              {onChainJobs.map((job, i) => (
-                <div key={i} className={`p-4 rounded-2xl border ${job.active ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200 opacity-70'}`}>
+             {onChainJobs.filter(({ job }) => job != null && job.to).map(({ job, originalIndex }) => (
+                <div key={originalIndex} className={`p-4 rounded-2xl border ${job.active ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200 opacity-70'}`}>
                   <div className="flex items-start justify-between">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${getStatusColor(job)}`}>
                           {getStatus(job)}
                         </span>
-                        <span className="text-xs text-slate-500">Job #{i}</span>
+                        <span className="text-xs text-slate-500">Job #{originalIndex}</span>
                       </div>
                       {job.label && <p className="text-xs font-medium text-slate-600">{job.label}</p>}
                       <p className="text-sm font-semibold text-slate-700">
                         {Number(job.amount) / 1e18} zkLTC → <span className="font-mono text-xs">{job.to.slice(0, 8)}...{job.to.slice(-4)}</span>
                       </p>
-                      <p className="text-xs text-slate-400">
-  {Number(job.nextRun) > 0
-    ? `Created: ${new Date((Number(job.nextRun) - Number(job.interval)) * 1000).toLocaleString()}`
-    : ''}
-</p>
+                      <p className="text-xs text-slate-500">{formatInterval(job.interval)}</p>
                       <p className="text-xs text-purple-600 font-medium">
                         Progress: {Number(job.executedCycles)}/{Number(job.maxCycles)} cycles
                       </p>
@@ -200,10 +219,10 @@ const handleRefresh = async () => {
                       </a>
                     </div>
                     {job.active && (
-                      <button onClick={() => handleCancel(i)} disabled={cancelling === i}
+                      <button onClick={() => handleCancel(originalIndex)} disabled={cancelling === originalIndex}
                         className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-red-100 text-red-600 text-xs font-semibold hover:bg-red-200 disabled:opacity-50">
                         <X className="w-3 h-3" />
-                        {cancelling === i ? 'Cancelling...' : 'Cancel'}
+                        {cancelling === originalIndex ? 'Cancelling...' : 'Cancel'}
                       </button>
                     )}
                   </div>
@@ -233,7 +252,7 @@ const handleRefresh = async () => {
           </div>
         )}
 
-     <div className="flex gap-3 p-4 rounded-2xl bg-blue-50/80 border border-blue-200">
+        <div className="flex gap-3 p-4 rounded-2xl bg-blue-50/80 border border-blue-200">
           <Info className="w-5 h-5 text-blue-500 flex-shrink-0" />
           <p className="text-xs text-blue-600">On-chain jobs execute automatically. Cancel anytime — remaining funds stay in contract until withdrawn.</p>
         </div>

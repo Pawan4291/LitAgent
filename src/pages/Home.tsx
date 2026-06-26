@@ -1,4 +1,5 @@
 import ScheduleModal from '../components/ScheduleModal';
+import { getOnChainHistory, getOnChainJobs } from '../services/ethers';
 import { createOnChainJob } from '../services/ethers';
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -118,15 +119,13 @@ if (settings.requireConfirm !== false && !isTrusted) {
         }
 
         case 'history': {
-          if (wallet.account) {
-            await fetchTransactions(wallet.account);
-          }
-          addAgentMessage(
-            `📜 Fetching your transaction history from LitVM... Check the **History** tab for full details. You have **${transactions.length}** recent transactions.`,
-            action
-          );
-          break;
-        }
+  const hist = await getOnChainHistory(wallet.account || '');
+  addAgentMessage(
+    `📜 You have **${hist.length}** on-chain executions recorded. Check the **History** tab for full details and AI spending analysis.`,
+    action
+  );
+  break;
+}
 
        case 'schedule': {
   setScheduleAction(action);
@@ -140,12 +139,17 @@ if (settings.requireConfirm !== false && !isTrusted) {
 }
 
         case 'stats': {
-          addAgentMessage(
-            `📊 Check the **History** tab for your full spending breakdown with AI-powered analysis. You have ${transactions.length} transactions on record.`,
-            action
-          );
-          break;
-        }
+  const hist = await getOnChainHistory(wallet.account || '');
+  const jobs = await getOnChainJobs(wallet.account || '');
+  const active = Array.from(jobs).filter((j: any) => j.active).length;
+  const completed = Array.from(jobs).filter((j: any) => !j.active && Number(j.executedCycles) >= Number(j.maxCycles)).length;
+  const cancelled = Array.from(jobs).filter((j: any) => !j.active && Number(j.executedCycles) < Number(j.maxCycles)).length;
+  addAgentMessage(
+    `📊 **Your LitAgent Stats:**\n\n⚡ **${hist.length}** total executions\n✅ **${active}** active jobs\n🏁 **${completed}** completed jobs\n❌ **${cancelled}** cancelled jobs\n\nCheck **History** tab for AI spending analysis.`,
+    action
+  );
+  break;
+}
 
         case 'help': {
           addAgentMessage(
