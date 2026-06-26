@@ -91,11 +91,12 @@ export default function Home() {
           setPendingAction(action);
           setTxResult(null);
 
-          if (settings.requireConfirm !== false) {
-            setShowConfirm(true);
-          } else {
-            await executeAction(action);
-          }
+         const isTrusted = (settings.whitelist || []).includes(action.to.toLowerCase());
+if (settings.requireConfirm !== false && !isTrusted) {
+  setShowConfirm(true);
+} else {
+  await executeAction(action);
+}
           addAgentMessage(
             `💸 Ready to send **${action.amount} zkLTC** to \`${action.to}\`. ${settings.requireConfirm !== false ? 'Please confirm below.' : 'Processing...'}`,
             action
@@ -148,7 +149,7 @@ export default function Home() {
 
         case 'help': {
           addAgentMessage(
-            `🤖 **LitAgent** — Your AI wallet assistant on LitVM LiteForge Testnet\n\n**I can help you:**\n\n💸 **Send zkLTC** — *"Send 0.5 zkLTC to 0x742d..."*\n💰 **Check balance** — *"What's my balance?"*\n📜 **View history** — *"Show my transactions"*\n⏰ **Schedule transfers** — *"Send 0.01 zkLTC to 0x... every day"*\n📊 **Spending stats** — *"Analyze my spending"*\n\n🔒 Your private key is **never** stored — you always sign with MetaMask.\n\nPowered by **Claude AI** + **LitVM LiteForge** ⚡`,
+            `🤖 **LitAgent** — Your AI wallet assistant on LitVM LiteForge Testnet\n\n**I can help you:**\n\n💸 **Send zkLTC** — *"Send 0.5 zkLTC to 0x742d..."*\n💰 **Check balance** — *"What's my balance?"*\n📜 **View history** — *"Show my transactions"*\n⏰ **Schedule transfers** — *"Send 0.01 zkLTC to 0x... every day"*\n📊 **Spending stats** — *"Analyze my spending"*\n\n🔒 Your private key is **never** stored — you always sign with MetaMask.\n\nPowered by **Groq AI** + **LitVM LiteForge** ⚡`,
             action
           );
           break;
