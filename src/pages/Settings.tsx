@@ -165,11 +165,18 @@ export default function Settings() {
               <p className="text-xs text-slate-400">AI Wallet on LitVM</p>
             </div>
           </div>
-          <p className="text-xs text-slate-400 leading-relaxed">
-            LitAgent is an open-source AI-powered wallet assistant built on LitVM LiteForge Testnet.
-            Powered by Groq AI (Llama) for natural language parsing and MetaMask for secure transaction signing.
-            No private keys are ever stored.
-          </p>
+         <p className="text-xs text-slate-400 leading-relaxed">
+  LitAgent is an open-source AI-powered wallet assistant built on LitVM LiteForge Testnet.
+  Powered by Claude AI for natural language parsing and MetaMask for secure transaction signing.
+  No private keys are ever stored.
+</p>
+<p className="text-xs text-slate-500 mt-3">
+  Built by{' '}
+  <a href="https://x.com/Pawan2001564157" target="_blank" rel="noreferrer"
+    className="text-blue-400 hover:text-blue-300 font-semibold">
+    Pawan
+  </a>
+</p>
           <div className="flex gap-3 mt-4">
             <a
               href="https://litvm.com"
