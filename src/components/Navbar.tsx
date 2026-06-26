@@ -27,15 +27,11 @@ export default function Navbar() {
         {/* Logo */}
         <NavLink to="/" className="flex items-center gap-2.5 group">
           <motion.div
-            whileHover={{ rotate: 15, scale: 1.1 }}
-            transition={{ type: 'spring', stiffness: 300 }}
-            className="w-9 h-9 rounded-xl flex items-center justify-center shadow-md"
-            style={{
-              background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #06b6d4 100%)',
-            }}
-          >
-            <Zap className="w-5 h-5 text-white" />
-          </motion.div>
+  whileHover={{ rotate: 15, scale: 1.1 }}
+  transition={{ type: 'spring', stiffness: 300 }}
+>
+  <img src="/favicon.png" alt="LitAgent" className="w-10 h-10 rounded-xl shadow-md object-cover" />
+</motion.div>
           <div>
             <span className="text-lg font-black tracking-tight" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
               <span style={{ background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
