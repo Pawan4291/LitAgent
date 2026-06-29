@@ -6,6 +6,7 @@ import History from './pages/History';
 import Automations from './pages/Automations';
 import Settings from './pages/Settings';
 import { WalletProvider } from './components/WalletContext';
+import Landing from './pages/Landing';
 function AnimatedBackground() {
   return (
     <div className="fixed inset-0 overflow-hidden pointer-events-none" style={{ zIndex: -2 }}>
@@ -128,14 +129,15 @@ export default function App() {
       <WalletProvider>
       <AnimatedBackground />
       <div className="min-h-screen relative">
-        <Navbar />
-        <main className="relative" style={{ fontFamily: 'Inter, sans-serif' }}>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/history" element={<History />} />
-            <Route path="/automations" element={<Automations />} />
-            <Route path="/settings" element={<Settings />} />
-          </Routes>
+       <Navbar />
+<main className="relative" style={{ fontFamily: 'Inter, sans-serif' }}>
+  <Routes>
+    <Route path="/" element={<Landing />} />
+  <Route path="/app" element={<Home />} />
+  <Route path="/history" element={<History />} />
+  <Route path="/automations" element={<Automations />} />
+  <Route path="/settings" element={<Settings />} />
+</Routes>
         </main>
       </div>
       </WalletProvider>

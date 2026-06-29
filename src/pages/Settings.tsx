@@ -167,7 +167,7 @@ export default function Settings() {
           </div>
          <p className="text-xs text-slate-400 leading-relaxed">
   LitAgent is an open-source AI-powered wallet assistant built on LitVM LiteForge Testnet.
-  Powered by Claude AI for natural language parsing and MetaMask for secure transaction signing.
+  Powered by Groq AI for natural language parsing and MetaMask for secure transaction signing.
   No private keys are ever stored.
 </p>
 <p className="text-xs text-slate-500 mt-3">

@@ -5,7 +5,7 @@ import WalletConnect from './WalletConnect';
 import LiveTicker from './LiveTicker';
 
 const NAV_ITEMS = [
-  { to: '/', label: 'Chat', icon: MessageSquare },
+  { to: '/app', label: 'Chat', icon: MessageSquare },
   { to: '/history', label: 'History', icon: History },
   { to: '/automations', label: 'Automate', icon: Clock },
   { to: '/settings', label: 'Settings', icon: Settings },
@@ -48,7 +48,7 @@ export default function Navbar() {
         {/* Nav links - desktop */}
         <div className="hidden md:flex items-center gap-1 bg-slate-100/80 p-1 rounded-2xl">
           {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
-            <NavLink key={to} to={to} end={to === '/'}>
+            <NavLink key={to} to={to} end={to === '/app'}>
               {({ isActive }) => (
                 <motion.div
                   whileHover={{ scale: 1.03 }}
@@ -90,7 +90,7 @@ export default function Navbar() {
         }}
       >
         {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
-          <NavLink key={to} to={to} end={to === '/'}>
+         <NavLink key={to} to={to} end={to === '/app'}>
             {({ isActive }) => (
               <motion.div
                 whileTap={{ scale: 0.9 }}
