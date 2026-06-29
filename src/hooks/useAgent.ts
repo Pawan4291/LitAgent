@@ -76,7 +76,7 @@ export function useAgent() {
     
     async (userMessage: string, walletAddress?: string, balance?: string) => {
       const apiKey = getApiKey();
-      console.log('API KEY:', import.meta.env.VITE_GROQ_API_KEY);
+    
       if (!apiKey) {
         addAgentMessage(
          '⚙️ Groq API key not found. Check your .env file has VITE_GROQ_API_KEY set.',
