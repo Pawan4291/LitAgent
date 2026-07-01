@@ -171,10 +171,10 @@ export default function Settings() {
   No private keys are ever stored.
 </p>
 <p className="text-xs text-slate-500 mt-3">
-  Built by{' '}
-  <a href="https://x.com/Pawan2001564157" target="_blank" rel="noreferrer"
+  Follow on{' '}
+  <a href="https://x.com/litagentapp" target="_blank" rel="noreferrer"
     className="text-blue-400 hover:text-blue-300 font-semibold">
-    Pawan
+    X
   </a>
 </p>
           <div className="flex gap-3 mt-4">

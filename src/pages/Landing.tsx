@@ -366,9 +366,9 @@ export default function Landing() {
             </motion.button>
 
             <p className="text-xs text-slate-400 mt-4">
-              Built by{' '}
-              <a href="https://x.com/Pawan2001564157" target="_blank" rel="noreferrer" className="text-xs text-blue-500 font-semibold hover:text-blue-700 transition-colors">
-  Pawan
+              Follow on{' '}
+              <a href="https://x.com/litagentapp" target="_blank" rel="noreferrer" className="text-xs text-blue-500 font-semibold hover:text-blue-700 transition-colors">
+  X
 </a>
               {' '}· Open source on{' '}
               <a href="https://github.com/Pawan4291/LitAgent" target="_blank" rel="noreferrer" className="text-blue-500 font-semibold hover:text-blue-700">
@@ -393,8 +393,8 @@ export default function Landing() {
             <a href="https://litvm.com" target="_blank" rel="noreferrer" className="hover:text-blue-500 transition-colors">LitVM</a>
             <a href="https://t.me/LitecoinVM" target="_blank" rel="noreferrer" className="hover:text-blue-500 transition-colors">Telegram</a>
             <a href="https://github.com/Pawan4291/LitAgent" target="_blank" rel="noreferrer" className="hover:text-blue-500 transition-colors">GitHub</a>
-            <a href="https://x.com/Pawan2001564157" target="_blank" rel="noreferrer" className="text-xs text-blue-500 font-semibold hover:text-blue-700 transition-colors">
-  Built by Pawan
+            <a href="https://x.com/litagentapp" target="_blank" rel="noreferrer" className="text-xs text-blue-500 font-semibold hover:text-blue-700 transition-colors">
+  X
 </a>
           </div>
         </div>
