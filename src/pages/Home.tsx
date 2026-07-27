@@ -463,6 +463,7 @@ const handleSplitConfirm = async (data: { description: string; recipients: { add
         isOpen={showSplit}
         initialRecipients={(splitAction?.recipients || []).map(r => ({ address: r.address, amount: r.amount || '' }))}
         initialAmount={splitAction?.amount || ''}
+        availableBalance={wallet.balance}
         onConfirm={handleSplitConfirm}
         onCancel={() => {
           setShowSplit(false);

@@ -11,6 +11,7 @@ interface SplitRequestModalProps {
   isOpen: boolean;
   initialRecipients?: SplitRecipientInput[];
   initialAmount?: string;
+  availableBalance?: string;
   onConfirm: (data: {
     description: string;
     recipients: SplitRecipientInput[];
@@ -23,6 +24,7 @@ export default function SplitRequestModal({
   isOpen,
   initialRecipients,
   initialAmount,
+  availableBalance,
   onConfirm,
   onCancel,
 }: SplitRequestModalProps) {
@@ -35,6 +37,7 @@ export default function SplitRequestModal({
       : [{ address: '', amount: '' }]
   );
   const [newAddress, setNewAddress] = useState('');
+  const [newAmount, setNewAmount] = useState('');
   const [deadline, setDeadline] = useState('');
 
   useEffect(() => {
@@ -54,8 +57,10 @@ export default function SplitRequestModal({
 
   const addRecipient = () => {
     if (!newAddress.trim()) return;
-    setRecipients((prev) => [...prev, { address: newAddress.trim(), amount: '' }]);
+    if (!isEqualSplit && !newAmount.trim()) return;
+    setRecipients((prev) => [...prev, { address: newAddress.trim(), amount: isEqualSplit ? '' : newAmount.trim() }]);
     setNewAddress('');
+    setNewAmount('');
   };
 
   const removeRecipient = (index: number) => {
@@ -162,17 +167,30 @@ export default function SplitRequestModal({
               </div>
             </div>
 
-            {/* Total amount (equal split only) */}
+           {/* Total amount (equal split only) */}
             {isEqualSplit && (
               <div className="mb-4">
                 <label className="text-xs font-semibold text-slate-500 mb-1 block">TOTAL AMOUNT (zkLTC)</label>
-                <input
-                  type="number"
-                  value={totalAmount}
-                  onChange={(e) => setTotalAmount(e.target.value)}
-                  placeholder="0.00"
-                  className="w-full px-3 py-2.5 rounded-2xl border border-slate-200 bg-slate-50 text-sm font-bold focus:outline-none focus:border-blue-400"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    value={totalAmount}
+                    onChange={(e) => setTotalAmount(e.target.value)}
+                    placeholder="0.00"
+                    className="flex-1 px-3 py-2.5 rounded-2xl border border-slate-200 bg-slate-50 text-sm font-bold focus:outline-none focus:border-blue-400"
+                  />
+                  {availableBalance && (
+                    <button
+                      onClick={() => setTotalAmount(availableBalance)}
+                      className="px-4 rounded-2xl bg-amber-100 text-amber-700 text-xs font-bold hover:bg-amber-200"
+                    >
+                      MAX
+                    </button>
+                  )}
+                </div>
+                {availableBalance && (
+                  <p className="text-xs text-slate-400 mt-1">Available: {availableBalance} zkLTC</p>
+                )}
                 {recipients.length > 0 && totalAmount && (
                   <p className="text-xs text-slate-400 mt-1">
                     {equalShare} zkLTC each × {recipients.length} recipients
@@ -195,6 +213,16 @@ export default function SplitRequestModal({
                   placeholder="0x wallet address"
                   className="flex-1 px-3 py-2.5 rounded-2xl border border-slate-200 bg-slate-50 text-sm font-mono focus:outline-none focus:border-blue-400"
                 />
+                {!isEqualSplit && (
+                  <input
+                    type="number"
+                    value={newAmount}
+                    onChange={(e) => setNewAmount(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && addRecipient()}
+                    placeholder="0.00"
+                    className="w-24 px-2 py-2.5 rounded-2xl border border-slate-200 bg-slate-50 text-sm font-bold text-right focus:outline-none focus:border-purple-400"
+                  />
+                )}
                 <button
                   onClick={addRecipient}
                   className="w-11 h-11 rounded-2xl bg-blue-500 text-white flex items-center justify-center hover:bg-blue-600"
