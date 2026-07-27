@@ -28,17 +28,42 @@ export default function History() {
   }, [wallet.account]);
 
   useEffect(() => {
-    if (!wallet.account || tab !== 'splits') return;
+    if (!wallet.account) return;
     getSplitsByCreator(wallet.account).then((records) => {
       setSplits([...records].sort((a, b) => b.createdAt - a.createdAt));
     });
-  }, [wallet.account, tab]);
+  }, [wallet.account]);
 
   const copySplitLink = (id: string) => {
     navigator.clipboard.writeText(`${window.location.origin}/split/${id}`);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 1500);
   };
+
+  const splitPayments = splits.flatMap((s) =>
+    s.recipients
+      .filter((r) => r.paid && r.txHash)
+      .map((r) => ({
+        type: 'split' as const,
+        amount: r.amount,
+        token: s.token,
+        address: r.address,
+        hash: r.txHash as string,
+        timestamp: Math.floor(s.createdAt / 1000),
+        description: s.description,
+      }))
+  );
+
+  const combinedHistory = [
+    ...history.map((h) => ({
+      type: 'schedule' as const,
+      jobId: Number(h.jobId),
+      amount: Number(h.amount) / 1e18,
+      to: h.to,
+      timestamp: Number(h.timestamp),
+    })),
+    ...splitPayments,
+  ].sort((a, b) => b.timestamp - a.timestamp);
 
  const handleAISummary = async () => {
   if (!wallet.account) return;
@@ -135,23 +160,38 @@ export default function History() {
           ) : tab === 'history' ? (
             isLoading ? (
               <p className="text-center text-slate-400 py-10">Loading...</p>
-            ) : history.length === 0 ? (
+            ) : combinedHistory.length === 0 ? (
               <div className="text-center py-10">
                 <p className="text-slate-400 text-sm">No on-chain executions yet.</p>
                 <p className="text-slate-400 text-xs mt-1">Schedule a payment to see history here.</p>
               </div>
             ) : (
-              <div className="space-y-3">
-                <p className="text-xs text-slate-500 font-semibold mb-2">{history.length} EXECUTIONS</p>
-                {history.map((h, i) => (
-                  <div key={i} className="p-3 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-between">
+              <div className="space-y-3 pt-2">
+                <p className="text-xs text-slate-500 font-semibold mb-2">{combinedHistory.length} EXECUTIONS</p>
+                {combinedHistory.map((h, i) => (
+                  <div key={i} className={`relative p-3 rounded-2xl border flex items-center justify-between ${h.type === 'split' ? 'bg-indigo-50 border-indigo-100' : 'bg-emerald-50 border-emerald-100'}`}>
+                    {h.type === 'split' && (
+                      <span className="absolute -top-2 left-3 px-2 py-0.5 rounded-full text-[10px] font-bold text-white"
+                        style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}>
+                        REQUEST PAYMENT
+                      </span>
+                    )}
                     <div className="space-y-0.5">
-                      <p className="text-xs font-bold text-emerald-700">✅ Executed — Job #{Number(h.jobId)}</p>
-                      <p className="text-sm font-semibold text-slate-700">{Number(h.amount)/1e18} zkLTC → <span className="font-mono text-xs">{h.to.slice(0,8)}...{h.to.slice(-4)}</span></p>
-                      <p className="text-xs text-slate-400">{new Date(Number(h.timestamp)*1000).toLocaleString()}</p>
+                      {h.type === 'schedule' ? (
+                        <>
+                          <p className="text-xs font-bold text-emerald-700">✅ Executed — Job #{h.jobId}</p>
+                          <p className="text-sm font-semibold text-slate-700">{h.amount} zkLTC → <span className="font-mono text-xs">{h.to.slice(0,8)}...{h.to.slice(-4)}</span></p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-xs font-bold text-indigo-700 mt-1">💜 {h.description}</p>
+                          <p className="text-sm font-semibold text-slate-700">{h.amount} {h.token} ← <span className="font-mono text-xs">{h.address.slice(0,8)}...{h.address.slice(-4)}</span></p>
+                        </>
+                      )}
+                      <p className="text-xs text-slate-400">{new Date(h.timestamp * 1000).toLocaleString()}</p>
                     </div>
-                    <a href={`${LITVM_CHAIN.explorerUrl}/address/${import.meta.env.VITE_SCHEDULER_CONTRACT}`}
-                      target="_blank" rel="noreferrer" className="text-blue-500">
+                    <a href={h.type === 'schedule' ? `${LITVM_CHAIN.explorerUrl}/address/${import.meta.env.VITE_SCHEDULER_CONTRACT}` : `${LITVM_CHAIN.explorerUrl}/tx/${h.hash}`}
+                      target="_blank" rel="noreferrer" className={h.type === 'split' ? 'text-indigo-500' : 'text-blue-500'}>
                       <ExternalLink className="w-4 h-4" />
                     </a>
                   </div>
