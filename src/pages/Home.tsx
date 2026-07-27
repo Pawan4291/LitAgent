@@ -260,7 +260,7 @@ const handleSplitConfirm = async (data: { description: string; recipients: { add
  if (result.success && result.id) {
     const link = `${window.location.origin}/split/${result.id}`;
     navigator.clipboard.writeText(link);
-    addAgentMessage(`✅ Split request created! Link copied to clipboard:\n\n${link}`, { ...splitAction!, action: 'split' } as AgentAction);
+    addAgentMessage(`✅ Split request created! Link copied to clipboard:\n\n${link}\n\n<a href="/history?tab=splits" style="color:#4f46e5;font-weight:600;">→ Track your request payments here</a>`, { ...splitAction!, action: 'split' } as AgentAction);
   } else {
     addAgentMessage(`❌ Failed to create split: ${result.error}`);
   }

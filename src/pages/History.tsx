@@ -9,7 +9,8 @@ import { getSplitsByCreator, SplitRequestRecord } from '../services/splitRequest
 
 export default function History() {
   const wallet = useWallet();
-  const [tab, setTab] = useState<'history' | 'stats' | 'splits'>('history');
+  const initialTab = new URLSearchParams(window.location.search).get('tab') === 'splits' ? 'splits' : 'history';
+  const [tab, setTab] = useState<'history' | 'stats' | 'splits'>(initialTab as any);
   const [history, setHistory] = useState<any[]>([]);
   const [splits, setSplits] = useState<SplitRequestRecord[]>([]);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -28,7 +29,9 @@ export default function History() {
 
   useEffect(() => {
     if (!wallet.account || tab !== 'splits') return;
-    getSplitsByCreator(wallet.account).then(setSplits);
+    getSplitsByCreator(wallet.account).then((records) => {
+      setSplits([...records].sort((a, b) => b.createdAt - a.createdAt));
+    });
   }, [wallet.account, tab]);
 
   const copySplitLink = (id: string) => {
