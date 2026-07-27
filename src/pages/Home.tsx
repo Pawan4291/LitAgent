@@ -74,6 +74,11 @@ export default function Home() {
         action.action = 'schedule';
       }
 
+      const isSplitIntent = /split|request payment|request from|divide between|collect from|split bill/i.test(userMessage);
+      if (isSplitIntent) {
+        action.action = 'split';
+      }
+
       const settings = JSON.parse(localStorage.getItem(STORAGE_KEYS.SETTINGS) || '{}');
 
       switch (action.action) {
