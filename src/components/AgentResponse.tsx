@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Bot, User, ExternalLink, CheckCircle, Clock, XCircle, Zap, Hash } from 'lucide-react';
+import { Bot, User, ExternalLink, CheckCircle, Clock, XCircle, Zap, Hash, Copy, Check } from 'lucide-react';
 import { ChatMessage } from '../hooks/useAgent';
 import { LITVM_CHAIN } from '../config/litvm';
 import { truncateAddress } from '../services/ethers';
@@ -14,6 +15,7 @@ const ACTION_COLORS: Record<string, string> = {
   balance: 'from-emerald-500 to-teal-600',
   history: 'from-violet-500 to-purple-600',
   schedule: 'from-orange-500 to-amber-600',
+  split: 'from-indigo-500 to-purple-600',
   stats: 'from-pink-500 to-rose-600',
   help: 'from-cyan-500 to-blue-600',
   unknown: 'from-slate-400 to-slate-600',
@@ -24,6 +26,7 @@ const ACTION_LABELS: Record<string, string> = {
   balance: '💰 Balance',
   history: '📜 History',
   schedule: '⏰ Schedule',
+  split: '👥 Split',
   stats: '📊 Stats',
   help: '❓ Help',
   unknown: '🤔 Unknown',
@@ -39,6 +42,15 @@ function parseMarkdown(text: string): string {
 
 export default function AgentResponse({ message, index }: AgentResponseProps) {
   const isUser = message.role === 'user';
+  const [copied, setCopied] = useState(false);
+  const linkMatch = message.content.match(/https?:\/\/\S+\/split\/\S+/);
+
+  const copyLink = () => {
+    if (!linkMatch) return;
+    navigator.clipboard.writeText(linkMatch[0]);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
 
   return (
     <motion.div
@@ -118,6 +130,20 @@ export default function AgentResponse({ message, index }: AgentResponseProps) {
                 </span>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Split link card */}
+        {!isUser && message.action?.action === 'split' && linkMatch && (
+          <div className="w-full p-3 rounded-2xl bg-indigo-50/80 border border-indigo-200 flex items-center gap-2">
+            <span className="text-xs font-mono text-indigo-700 truncate flex-1">{linkMatch[0]}</span>
+            <button
+              onClick={copyLink}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-indigo-500 text-white text-xs font-semibold flex-shrink-0 hover:bg-indigo-600"
+            >
+              {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+              {copied ? 'Copied' : 'Copy'}
+            </button>
           </div>
         )}
 

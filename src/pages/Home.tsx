@@ -257,9 +257,10 @@ const handleSplitConfirm = async (data: { description: string; recipients: { add
   setShowSplit(false);
   if (!wallet.account) return;
   const result = await createSplitRequest(wallet.account, data.description, data.recipients, data.deadline);
-  if (result.success && result.id) {
+ if (result.success && result.id) {
     const link = `${window.location.origin}/split/${result.id}`;
-    addAgentMessage(`✅ Split request created! Share this link:\n\n${link}`);
+    navigator.clipboard.writeText(link);
+    addAgentMessage(`✅ Split request created! Link copied to clipboard:\n\n${link}`);
   } else {
     addAgentMessage(`❌ Failed to create split: ${result.error}`);
   }
