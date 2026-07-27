@@ -1,15 +1,18 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { History as HistoryIcon, Sparkles, Download, ExternalLink } from 'lucide-react';
+import { History as HistoryIcon, Sparkles, Download, ExternalLink, Users, Copy } from 'lucide-react';
 import { useWallet } from '../hooks/useWallet';
 import { getOnChainHistory } from '../services/ethers';
 import { generateSpendingStats } from '../services/claude';
 import { LITVM_CHAIN } from '../config/litvm';
+import { getSplitsByCreator, SplitRequestRecord } from '../services/splitRequest';
 
 export default function History() {
   const wallet = useWallet();
-  const [tab, setTab] = useState<'history' | 'stats'>('history');
+  const [tab, setTab] = useState<'history' | 'stats' | 'splits'>('history');
   const [history, setHistory] = useState<any[]>([]);
+  const [splits, setSplits] = useState<SplitRequestRecord[]>([]);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [aiSummary, setAiSummary] = useState('');
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
@@ -22,6 +25,17 @@ export default function History() {
       setIsLoading(false);
     });
   }, [wallet.account]);
+
+  useEffect(() => {
+    if (!wallet.account || tab !== 'splits') return;
+    getSplitsByCreator(wallet.account).then(setSplits);
+  }, [wallet.account, tab]);
+
+  const copySplitLink = (id: string) => {
+    navigator.clipboard.writeText(`${window.location.origin}/split/${id}`);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 1500);
+  };
 
  const handleAISummary = async () => {
   if (!wallet.account) return;
@@ -75,10 +89,10 @@ export default function History() {
         </motion.div>
 
         <div className="flex gap-1 p-1 bg-slate-100/80 rounded-2xl mb-6">
-          {(['history', 'stats'] as const).map(t => (
+          {(['history', 'splits', 'stats'] as const).map(t => (
             <button key={t} onClick={() => setTab(t)}
               className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 ${tab === t ? 'bg-white text-slate-800 shadow-md' : 'text-slate-500'}`}>
-              {t === 'history' ? <><HistoryIcon className="w-4 h-4" />Transactions</> : <><Sparkles className="w-4 h-4" />Analytics</>}
+              {t === 'history' ? <><HistoryIcon className="w-4 h-4" />Transactions</> : t === 'splits' ? <><Users className="w-4 h-4" />Splits</> : <><Sparkles className="w-4 h-4" />Analytics</>}
             </button>
           ))}
         </div>
@@ -86,7 +100,36 @@ export default function History() {
         <motion.div key={tab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
           className="bg-white/70 backdrop-blur-xl rounded-3xl border border-slate-100 shadow-xl p-5">
 
-          {tab === 'history' ? (
+          {tab === 'splits' ? (
+            splits.length === 0 ? (
+              <div className="text-center py-10">
+                <p className="text-slate-400 text-sm">No split requests created yet.</p>
+                <p className="text-slate-400 text-xs mt-1">Ask LitAgent to split a payment to see it here.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-xs text-slate-500 font-semibold mb-2">{splits.length} SPLIT REQUESTS</p>
+                {splits.map((s) => (
+                  <div key={s.id} className="p-3 rounded-2xl bg-blue-50 border border-blue-100">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-sm font-semibold text-slate-700">{s.description}</p>
+                      <button onClick={() => copySplitLink(s.id)} className="text-blue-500 flex items-center gap-1 text-xs font-medium">
+                        <Copy className="w-3.5 h-3.5" /> {copiedId === s.id ? 'Copied!' : 'Copy Link'}
+                      </button>
+                    </div>
+                    <div className="space-y-1">
+                      {s.recipients.map((r) => (
+                        <div key={r.address} className="flex justify-between text-xs">
+                          <span className="font-mono text-slate-500">{r.address.slice(0,8)}...{r.address.slice(-4)}</span>
+                          <span className="font-semibold text-slate-600">{r.amount} {s.token} · <span className={r.paid ? 'text-emerald-600' : 'text-amber-500'}>{r.paid ? 'Paid' : 'Pending'}</span></span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          ) : tab === 'history' ? (
             isLoading ? (
               <p className="text-center text-slate-400 py-10">Loading...</p>
             ) : history.length === 0 ? (

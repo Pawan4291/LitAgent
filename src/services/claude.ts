@@ -1,11 +1,17 @@
 import { CLAUDE_API_URL, CLAUDE_MODEL, GROQ_API_KEY } from '../config/constants';
 
+export interface SplitRecipient {
+  address: string;
+  amount: string | null;
+}
+
 export interface AgentAction {
-  action: 'send' | 'balance' | 'history' | 'schedule' | 'stats' | 'help' | 'unknown';
+  action: 'send' | 'balance' | 'history' | 'schedule' | 'stats' | 'help' | 'split' | 'unknown';
   to: string | null;
   amount: string | null;
   schedule: string | null;
   scheduleMs: number | null;
+  recipients: SplitRecipient[] | null;
   message: string;
   error: string | null;
 }
@@ -16,6 +22,7 @@ Parse ANY user message and return ONLY valid JSON. Be smart about intent. Never 
 
 ACTION RULES (pick the best match):
 - "send", "transfer", "pay", "give", "wire" → "send"
+- "split", "split bill", "request payment", "request from", "collect from", "divide between" → "split"
 - "every", "daily", "weekly", "monthly", "recurring", "repeat", "schedule", "automate", "set up payment" → "schedule"
 - "balance", "how much", "wallet", "funds", "money", "rich", "broke", "account" → "balance"
 - "history", "transactions", "past", "previous", "sent", "received", "activity", "log" → "history"
@@ -25,13 +32,16 @@ ACTION RULES (pick the best match):
 
 AMOUNT RULE: Extract number only. "0.1 zkLTC" → "0.1". Never include units.
 
+SPLIT RULE: If action is "split", extract any real 0x wallet addresses mentioned into "recipients" as [{ "address": "0x...", "amount": "0.05" or null }]. If the message names recipients without real addresses ("wallet A", "wallet B", a person's name), still set action to "split" but return "recipients": [] — the user will fill addresses in manually. If amounts per recipient aren't specified, leave each "amount" as null (equal split assumed).
+
 Response format:
 {
-  "action": "send"|"balance"|"history"|"schedule"|"stats"|"help"|"unknown",
+  "action": "send"|"balance"|"history"|"schedule"|"stats"|"help"|"split"|"unknown",
   "to": "0x address or null",
-  "amount": "number only or null",
+  "amount": "total number only or null",
   "schedule": "human description or null",
   "scheduleMs": null,
+  "recipients": [{ "address": "0x... or empty string", "amount": "number or null" }] or null,
   "message": "friendly 1-2 sentence response explaining what you understood",
   "error": null
 }`;
@@ -84,6 +94,7 @@ User: "${userMessage}"`;
       amount: null,
       schedule: null,
       scheduleMs: null,
+      recipients: null,
       message: `Error: ${error.message}`,
       error: error.message,
     };

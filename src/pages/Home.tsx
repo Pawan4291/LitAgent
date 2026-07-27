@@ -1,4 +1,6 @@
 import ScheduleModal from '../components/ScheduleModal';
+import SplitRequestModal from '../components/SplitRequestModal';
+import { createSplitRequest } from '../services/splitRequest';
 import { getOnChainHistory, getOnChainJobs } from '../services/ethers';
 import { createOnChainJob } from '../services/ethers';
 import { useRef, useEffect, useState, useCallback } from 'react';
@@ -27,6 +29,8 @@ const WELCOME_MESSAGES = [
 export default function Home() {
   const [showSchedule, setShowSchedule] = useState(false);
   const [scheduleAction, setScheduleAction] = useState<AgentAction | null>(null);
+  const [showSplit, setShowSplit] = useState(false);
+  const [splitAction, setSplitAction] = useState<AgentAction | null>(null);
  const wallet = useWalletContext();
   const { messages, isThinking, processMessage, addAgentMessage, clearHistory } = useAgent();
   const { transactions, fetchTransactions } = useTransactions();
@@ -138,6 +142,13 @@ if (settings.requireConfirm !== false && !isTrusted) {
   break;
 }
 
+        case 'split': {
+  setSplitAction(action);
+  setShowSplit(true);
+  addAgentMessage(`👥 Opening split request builder! Add recipients and amounts in the form.`, action);
+  break;
+}
+
         case 'stats': {
   const hist = await getOnChainHistory(wallet.account || '');
   const jobs = await getOnChainJobs(wallet.account || '');
@@ -234,6 +245,18 @@ addAgentMessage(
 );
   } else {
     addAgentMessage(`❌ Failed: ${result.error}`);
+  }
+};
+
+const handleSplitConfirm = async (data: { description: string; recipients: { address: string; amount: string }[]; deadline: string | null }) => {
+  setShowSplit(false);
+  if (!wallet.account) return;
+  const result = await createSplitRequest(wallet.account, data.description, data.recipients, data.deadline);
+  if (result.success && result.id) {
+    const link = `${window.location.origin}/split/${result.id}`;
+    addAgentMessage(`✅ Split request created! Share this link:\n\n${link}`);
+  } else {
+    addAgentMessage(`❌ Failed to create split: ${result.error}`);
   }
 };
 
@@ -431,6 +454,17 @@ addAgentMessage(
   addAgentMessage('❌ Schedule cancelled by user.');
 }}
 />
+      <SplitRequestModal
+        isOpen={showSplit}
+        initialRecipients={(splitAction?.recipients || []).map(r => ({ address: r.address, amount: r.amount || '' }))}
+        initialAmount={splitAction?.amount || ''}
+        onConfirm={handleSplitConfirm}
+        onCancel={() => {
+          setShowSplit(false);
+          setSplitAction(null);
+          addAgentMessage('❌ Split request cancelled by user.');
+        }}
+      />
     </div>
   );
 }

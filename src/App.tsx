@@ -7,6 +7,7 @@ import Automations from './pages/Automations';
 import Settings from './pages/Settings';
 import { WalletProvider } from './components/WalletContext';
 import Landing from './pages/Landing';
+import SplitClaim from './pages/SplitClaim';
 function AnimatedBackground() {
   return (
     <div className="fixed inset-0 overflow-hidden pointer-events-none" style={{ zIndex: -2 }}>
@@ -137,6 +138,7 @@ export default function App() {
   <Route path="/history" element={<History />} />
   <Route path="/automations" element={<Automations />} />
   <Route path="/settings" element={<Settings />} />
+  <Route path="/split/:id" element={<SplitClaim />} />
 </Routes>
         </main>
       </div>
