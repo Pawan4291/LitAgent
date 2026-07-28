@@ -69,7 +69,7 @@ export default function ScheduleModal({ isOpen, toAddress, amount, onConfirm, on
             className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl p-6 z-10"
           >
             {/* Header */}
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
                   <Clock className="w-5 h-5 text-white" />
@@ -84,6 +84,12 @@ export default function ScheduleModal({ isOpen, toAddress, amount, onConfirm, on
               </button>
             </div>
 
+            {/* One-time / Recurring toggle (visual only — feature under maintenance) */}
+            <div className="grid grid-cols-2 gap-2 mb-4 p-1 bg-slate-100 rounded-2xl">
+              <div className="py-2 rounded-xl text-sm font-semibold text-center bg-white text-slate-800 shadow-sm">One-time</div>
+              <div className="py-2 rounded-xl text-sm font-semibold text-center text-slate-400">Recurring</div>
+            </div>
+
             {/* To */}
             <div className="mb-4">
               <label className="text-xs font-semibold text-slate-500 mb-1 block">SENDING TO</label>
@@ -95,9 +101,12 @@ export default function ScheduleModal({ isOpen, toAddress, amount, onConfirm, on
             {/* Amount per transfer */}
             <div className="mb-4">
               <label className="text-xs font-semibold text-slate-500 mb-1 block">AMOUNT PER TRANSFER</label>
-              <div className="px-3 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between">
-                <span className="text-sm font-bold text-blue-600">{amount} zkLTC</span>
-                <span className="text-xs text-slate-400">per cycle</span>
+              <div className="flex gap-2">
+                <div className="flex-1 px-3 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+                  <span className="text-sm font-bold text-blue-600">{amount}</span>
+                </div>
+                <div className="px-4 py-2.5 rounded-2xl bg-slate-100 text-slate-500 text-xs font-bold flex items-center">MAX</div>
+                <div className="px-4 py-2.5 rounded-2xl bg-slate-100 text-slate-500 text-xs font-bold flex items-center">zkLTC</div>
               </div>
             </div>
 
@@ -245,13 +254,11 @@ export default function ScheduleModal({ isOpen, toAddress, amount, onConfirm, on
                 Cancel
               </button>
               <button
-                onClick={() => isValid && onConfirm(intervalSeconds, totalAmount, cycles)}
-                disabled={!isValid}
-                className="flex-1 py-3 rounded-2xl font-bold text-sm text-white flex items-center justify-center gap-2 disabled:opacity-50"
-                style={{ background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)' }}
+                disabled
+                className="flex-1 py-3 rounded-2xl font-bold text-sm text-slate-400 bg-slate-200 flex items-center justify-center gap-2 cursor-not-allowed"
               >
-                <Zap className="w-4 h-4" />
-                Deposit & Schedule
+                <Clock className="w-4 h-4" />
+                Under Maintenance
               </button>
             </div>
           </motion.div>
