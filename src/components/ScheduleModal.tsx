@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Clock, Zap, Calendar } from 'lucide-react';
+import { X, Clock } from 'lucide-react';
 
 interface ScheduleModalProps {
   isOpen: boolean;
@@ -10,46 +10,12 @@ interface ScheduleModalProps {
   onCancel: () => void;
 }
 
-const FREQUENCY_OPTIONS = [
-  { label: 'Minutes', value: 'minutes', seconds: 60 },
-  { label: 'Hours', value: 'hours', seconds: 3600 },
-  { label: 'Days', value: 'days', seconds: 86400 },
-  { label: 'Weeks', value: 'weeks', seconds: 604800 },
-  { label: 'Months', value: 'months', seconds: 2592000 },
-];
+const REPEAT_UNITS = ['Minutes', 'Hours', 'Days', 'Weeks', 'Months'];
 
-const DURATION_OPTIONS = [
-  { label: '10 Minutes', seconds: 600 },
-  { label: '30 Minutes', seconds: 1800 },
-  { label: '1 Hour', seconds: 3600 },
-  { label: '6 Hours', seconds: 21600 },
-  { label: '12 Hours', seconds: 43200 },
-  { label: '1 Day', seconds: 86400 },
-  { label: '3 Days', seconds: 259200 },
-  { label: '1 Week', seconds: 604800 },
-  { label: '2 Weeks', seconds: 1209600 },
-  { label: '1 Month', seconds: 2592000 },
-  { label: '3 Months', seconds: 7776000 },
-  { label: '6 Months', seconds: 15552000 },
-  { label: '1 Year', seconds: 31536000 },
-  { label: 'Custom', seconds: 0 },
-];
-
-export default function ScheduleModal({ isOpen, toAddress, amount, onConfirm, onCancel }: ScheduleModalProps) {
-  const [freqValue, setFreqValue] = useState(3);
-  const [freqUnit, setFreqUnit] = useState(FREQUENCY_OPTIONS[0]);
-  const [durationOption, setDurationOption] = useState(DURATION_OPTIONS[0]);
-  const [customDuration, setCustomDuration] = useState(30);
-  const [customDurationUnit, setCustomDurationUnit] = useState(FREQUENCY_OPTIONS[1]);
-
-  const intervalSeconds = freqValue * freqUnit.seconds;
-  const durationSeconds = durationOption.seconds === 0
-    ? customDuration * customDurationUnit.seconds
-    : durationOption.seconds;
-  const cycles = Math.floor(durationSeconds / intervalSeconds);
-  const totalAmount = (parseFloat(amount || '0') * cycles).toFixed(4);
-
-  const isValid = cycles >= 1 && parseFloat(amount) > 0 && intervalSeconds > 0;
+export default function ScheduleModal({ isOpen, toAddress, amount, onCancel }: ScheduleModalProps) {
+  const [mode, setMode] = useState<'onetime' | 'recurring'>('onetime');
+  const [repeatValue, setRepeatValue] = useState(1);
+  const [repeatUnit, setRepeatUnit] = useState('Days');
 
   return (
     <AnimatePresence>
@@ -66,7 +32,7 @@ export default function ScheduleModal({ isOpen, toAddress, amount, onConfirm, on
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl p-6 z-10"
+            className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl p-6 z-10 max-h-[90vh] overflow-y-auto"
           >
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
@@ -84,166 +50,112 @@ export default function ScheduleModal({ isOpen, toAddress, amount, onConfirm, on
               </button>
             </div>
 
-            {/* One-time / Recurring toggle (visual only — feature under maintenance) */}
+            {/* One-time / Recurring toggle */}
             <div className="grid grid-cols-2 gap-2 mb-4 p-1 bg-slate-100 rounded-2xl">
-              <div className="py-2 rounded-xl text-sm font-semibold text-center bg-white text-slate-800 shadow-sm">One-time</div>
-              <div className="py-2 rounded-xl text-sm font-semibold text-center text-slate-400">Recurring</div>
+              <button
+                onClick={() => setMode('onetime')}
+                className={`py-2 rounded-xl text-sm font-semibold transition-all ${mode === 'onetime' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400'}`}
+              >
+                One-time
+              </button>
+              <button
+                onClick={() => setMode('recurring')}
+                className={`py-2 rounded-xl text-sm font-semibold transition-all ${mode === 'recurring' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400'}`}
+              >
+                Recurring
+              </button>
             </div>
 
-            {/* To */}
+            {/* Sending to */}
             <div className="mb-4">
               <label className="text-xs font-semibold text-slate-500 mb-1 block">SENDING TO</label>
-              <div className="px-3 py-2.5 rounded-2xl bg-slate-50 border border-slate-200">
-                <p className="text-sm font-mono text-slate-700 truncate">{toAddress}</p>
-              </div>
+              <input
+                type="text"
+                defaultValue={toAddress}
+                placeholder="@alice or 0x..."
+                className="w-full px-3 py-2.5 rounded-2xl border border-slate-200 bg-slate-50 text-sm font-mono focus:outline-none focus:border-blue-400"
+              />
             </div>
 
-            {/* Amount per transfer */}
+            {/* Amount */}
             <div className="mb-4">
               <label className="text-xs font-semibold text-slate-500 mb-1 block">AMOUNT PER TRANSFER</label>
               <div className="flex gap-2">
-                <div className="flex-1 px-3 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between">
-                  <span className="text-sm font-bold text-blue-600">{amount}</span>
-                </div>
+                <input
+                  type="text"
+                  defaultValue={amount}
+                  className="flex-1 px-3 py-2.5 rounded-2xl border border-slate-200 bg-slate-50 text-sm font-bold focus:outline-none focus:border-blue-400"
+                />
                 <div className="px-4 py-2.5 rounded-2xl bg-slate-100 text-slate-500 text-xs font-bold flex items-center">MAX</div>
                 <div className="px-4 py-2.5 rounded-2xl bg-slate-100 text-slate-500 text-xs font-bold flex items-center">zkLTC</div>
               </div>
+              <p className="text-xs text-slate-400 mt-1">Available: 0.0000 zkLTC</p>
             </div>
 
-            {/* Frequency */}
-            <div className="mb-4">
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">SEND EVERY</label>
-              <div className="flex gap-2">
-                <input
-                  type="number"
-                  min={1}
-                  value={freqValue}
-                  onChange={(e) => setFreqValue(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="w-20 px-3 py-2.5 rounded-2xl border border-slate-200 bg-slate-50 text-sm font-bold text-center focus:outline-none focus:border-blue-400"
-                />
-                <div className="flex-1 grid grid-cols-3 gap-1">
-                  {FREQUENCY_OPTIONS.slice(0, 3).map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => setFreqUnit(opt)}
-                      className={`py-2 rounded-xl text-xs font-semibold transition-all ${
-                        freqUnit.value === opt.value
-                          ? 'bg-blue-500 text-white shadow-md'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
+            {mode === 'onetime' ? (
+              <div className="mb-4">
+                <label className="text-xs font-semibold text-slate-500 mb-1 block">SEND AT</label>
+                <div className="flex gap-2">
+                  <input type="date" className="flex-1 px-3 py-2.5 rounded-2xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:border-blue-400" />
+                  <input type="time" className="flex-1 px-3 py-2.5 rounded-2xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:border-blue-400" />
                 </div>
+                <p className="text-xs text-slate-400 mt-1">⏱ Payment may take 2-3 minutes to reach the destination wallet after this time</p>
               </div>
-              <div className="flex gap-1 mt-1">
-                {FREQUENCY_OPTIONS.slice(3).map((opt) => (
-                  <button
-                    key={opt.value}
-                    onClick={() => setFreqUnit(opt)}
-                    className={`flex-1 py-2 rounded-xl text-xs font-semibold transition-all ${
-                      freqUnit.value === opt.value
-                        ? 'bg-blue-500 text-white shadow-md'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Duration */}
-            <div className="mb-4">
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">FOR HOW LONG</label>
-              <div className="grid grid-cols-3 gap-1">
-                {DURATION_OPTIONS.slice(0, 9).map((opt) => (
-                  <button
-                    key={opt.label}
-                    onClick={() => setDurationOption(opt)}
-                    className={`py-2 rounded-xl text-xs font-semibold transition-all ${
-                      durationOption.label === opt.label
-                        ? 'bg-purple-500 text-white shadow-md'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-              <div className="grid grid-cols-4 gap-1 mt-1">
-                {DURATION_OPTIONS.slice(9).map((opt) => (
-                  <button
-                    key={opt.label}
-                    onClick={() => setDurationOption(opt)}
-                    className={`py-2 rounded-xl text-xs font-semibold transition-all ${
-                      durationOption.label === opt.label
-                        ? 'bg-purple-500 text-white shadow-md'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Custom duration */}
-              {durationOption.seconds === 0 && (
-                <div className="flex gap-2 mt-2">
-                  <input
-                    type="number"
-                    min={1}
-                    value={customDuration}
-                    onChange={(e) => setCustomDuration(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="w-20 px-3 py-2.5 rounded-2xl border border-slate-200 bg-slate-50 text-sm font-bold text-center focus:outline-none focus:border-purple-400"
-                  />
-                  <div className="flex-1 grid grid-cols-3 gap-1">
-                    {FREQUENCY_OPTIONS.slice(0, 3).map((opt) => (
-                      <button
-                        key={opt.value}
-                        onClick={() => setCustomDurationUnit(opt)}
-                        className={`py-2 rounded-xl text-xs font-semibold transition-all ${
-                          customDurationUnit.value === opt.value
-                            ? 'bg-purple-500 text-white'
-                            : 'bg-slate-100 text-slate-600'
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
+            ) : (
+              <>
+                <div className="mb-4">
+                  <label className="text-xs font-semibold text-slate-500 mb-1 block">START TIME (FIRST PAYMENT GOES AT THIS TIME)</label>
+                  <div className="flex gap-2">
+                    <input type="date" className="flex-1 px-3 py-2.5 rounded-2xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:border-blue-400" />
+                    <input type="time" className="flex-1 px-3 py-2.5 rounded-2xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:border-blue-400" />
                   </div>
                 </div>
-              )}
-            </div>
+
+                <div className="mb-4">
+                  <label className="text-xs font-semibold text-slate-500 mb-1 block">REPEAT EVERY</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      value={repeatValue}
+                      onChange={(e) => setRepeatValue(Math.max(1, parseInt(e.target.value) || 1))}
+                      className="w-16 px-3 py-2.5 rounded-2xl border border-slate-200 bg-slate-50 text-sm font-bold text-center focus:outline-none focus:border-blue-400"
+                    />
+                    <div className="flex-1 grid grid-cols-5 gap-1">
+                      {REPEAT_UNITS.map((u) => (
+                        <button
+                          key={u}
+                          onClick={() => setRepeatUnit(u)}
+                          className={`py-2 rounded-xl text-[11px] font-semibold transition-all ${repeatUnit === u ? 'bg-blue-500 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                        >
+                          {u}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <label className="text-xs font-semibold text-slate-500 mb-1 block">REPEAT UNTIL</label>
+                  <div className="flex gap-2">
+                    <input type="date" className="flex-1 px-3 py-2.5 rounded-2xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:border-blue-400" />
+                    <input type="time" className="flex-1 px-3 py-2.5 rounded-2xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:border-blue-400" />
+                  </div>
+                </div>
+              </>
+            )}
 
             {/* Summary */}
             <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-100 mb-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Calendar className="w-4 h-4 text-blue-500" />
-                <span className="text-xs font-bold text-slate-600">SUMMARY</span>
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500">Total cycles</span>
+                <span className="font-bold text-slate-700">—</span>
               </div>
-              <div className="space-y-1">
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">Total cycles</span>
-                  <span className="font-bold text-slate-700">{isValid ? cycles : '—'}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">Interval</span>
-                  <span className="font-bold text-slate-700">Every {freqValue} {freqUnit.label.toLowerCase()}</span>
-                </div>
-                <div className="flex justify-between text-sm border-t border-blue-100 pt-1 mt-1">
-                  <span className="text-slate-600 font-semibold">Total deposit needed</span>
-                  <span className="font-black text-blue-600">{isValid ? totalAmount : '—'} zkLTC</span>
-                </div>
+              <div className="flex justify-between text-sm border-t border-blue-100 pt-1 mt-1">
+                <span className="text-slate-600 font-semibold">Total deposit needed</span>
+                <span className="font-black text-blue-600">— zkLTC</span>
               </div>
             </div>
-
-            {!isValid && (
-              <p className="text-xs text-red-500 text-center mb-3">
-                ⚠️ Interval must be shorter than total duration
-              </p>
-            )}
 
             {/* Buttons */}
             <div className="flex gap-3">
