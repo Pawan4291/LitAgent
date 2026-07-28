@@ -263,6 +263,59 @@ export async function getOnChainHistory(ownerAddress: string): Promise<any[]> {
     return [];
   }
 }
+const BULKPAYOUT_ABI = [
+  "function bulkSend(address[] _recipients, uint256[] _amounts, string _label) payable",
+  "function getHistory(address sender) view returns (tuple(uint256 payoutId, uint256 timestamp, address[] recipients, uint256[] amounts, string label)[])"
+];
+
+export async function bulkSend(
+  recipients: string[],
+  amounts: string[],
+  label: string
+): Promise<{ hash: string; success: boolean; error?: string }> {
+  try {
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    const from = accounts[0];
+
+    const amountsWei = amounts.map(a => ethers.parseEther(a));
+    const total = amountsWei.reduce((sum, a) => sum + a, 0n);
+
+    const iface = new ethers.Interface([
+      "function bulkSend(address[] _recipients, uint256[] _amounts, string _label) payable"
+    ]);
+    const data = iface.encodeFunctionData('bulkSend', [recipients, amountsWei, label]);
+
+    const txHash = await window.ethereum.request({
+      method: 'eth_sendTransaction',
+      params: [{
+        from,
+        to: import.meta.env.VITE_BULKPAYOUT_CONTRACT,
+        data,
+        value: '0x' + total.toString(16),
+        gas: '0x' + (200000 + recipients.length * 60000).toString(16)
+      }]
+    });
+
+    return { hash: txHash, success: true };
+  } catch (error: any) {
+    return { hash: '', success: false, error: error.message };
+  }
+}
+
+export async function getBulkHistory(ownerAddress: string): Promise<any[]> {
+  try {
+    const provider = getRpcProvider();
+    const contract = new ethers.Contract(
+      import.meta.env.VITE_BULKPAYOUT_CONTRACT,
+      BULKPAYOUT_ABI,
+      provider
+    );
+    return await contract.getHistory(ownerAddress);
+  } catch {
+    return [];
+  }
+}
+
 export async function registerWallet(address: string): Promise<void> {
   try {
     await fetch(`${import.meta.env.VITE_EXECUTOR_API}/api/register`, {

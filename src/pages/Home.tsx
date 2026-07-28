@@ -1,6 +1,8 @@
 import ScheduleModal from '../components/ScheduleModal';
 import SplitRequestModal from '../components/SplitRequestModal';
 import { createSplitRequest } from '../services/splitRequest';
+import BulkPayoutModal from '../components/BulkPayoutModal';
+import { bulkSend } from '../services/ethers';
 import { getOnChainHistory, getOnChainJobs } from '../services/ethers';
 import { createOnChainJob } from '../services/ethers';
 import { useRef, useEffect, useState, useCallback } from 'react';
@@ -31,6 +33,8 @@ export default function Home() {
   const [scheduleAction, setScheduleAction] = useState<AgentAction | null>(null);
   const [showSplit, setShowSplit] = useState(false);
   const [splitAction, setSplitAction] = useState<AgentAction | null>(null);
+  const [showBulk, setShowBulk] = useState(false);
+  const [bulkAction, setBulkAction] = useState<AgentAction | null>(null);
  const wallet = useWalletContext();
   const { messages, isThinking, processMessage, addAgentMessage, clearHistory } = useAgent();
   const { transactions, fetchTransactions } = useTransactions();
@@ -77,6 +81,11 @@ export default function Home() {
       const isSplitIntent = /split|request payment|request from|divide between|collect from|split bill/i.test(userMessage);
       if (isSplitIntent) {
         action.action = 'split';
+      }
+
+      const isBulkIntent = /bulk|payroll|pay everyone|send to multiple|send to each/i.test(userMessage);
+      if (isBulkIntent) {
+        action.action = 'bulk';
       }
 
       const settings = JSON.parse(localStorage.getItem(STORAGE_KEYS.SETTINGS) || '{}');
@@ -151,6 +160,13 @@ if (settings.requireConfirm !== false && !isTrusted) {
   setSplitAction(action);
   setShowSplit(true);
   addAgentMessage(`👥 Opening split request builder! Add recipients and amounts in the form.`, action);
+  break;
+}
+
+        case 'bulk': {
+  setBulkAction(action);
+  setShowBulk(true);
+  addAgentMessage(`📤 Opening bulk payout builder! Add recipients and amounts in the form.`, action);
   break;
 }
 
@@ -250,6 +266,27 @@ addAgentMessage(
 );
   } else {
     addAgentMessage(`❌ Failed: ${result.error}`);
+  }
+};
+
+const handleBulkConfirm = async (data: { description: string; recipients: { address: string; amount: string }[] }) => {
+  setShowBulk(false);
+  addAgentMessage(`⏳ Sending bulk payout to ${data.recipients.length} recipients...`);
+  const result = await bulkSend(
+    data.recipients.map(r => r.address),
+    data.recipients.map(r => r.amount),
+    data.description
+  );
+  if (result.success) {
+    addAgentMessage(
+      `✅ Bulk payout sent to ${data.recipients.length} wallets!\n\nTx: \`${result.hash}\``,
+      { ...bulkAction!, action: 'bulk' } as AgentAction,
+      result.hash,
+      'confirmed'
+    );
+    wallet.refreshBalance();
+  } else {
+    addAgentMessage(`❌ Bulk payout failed: ${result.error}`);
   }
 };
 
@@ -470,6 +507,17 @@ const handleSplitConfirm = async (data: { description: string; recipients: { add
           setShowSplit(false);
           setSplitAction(null);
           addAgentMessage('❌ Split request cancelled by user.');
+        }}
+      />
+      <BulkPayoutModal
+        isOpen={showBulk}
+        initialRecipients={(bulkAction?.recipients || []).map(r => ({ address: r.address, amount: r.amount || '' }))}
+        availableBalance={wallet.balance}
+        onConfirm={handleBulkConfirm}
+        onCancel={() => {
+          setShowBulk(false);
+          setBulkAction(null);
+          addAgentMessage('❌ Bulk payout cancelled by user.');
         }}
       />
     </div>
