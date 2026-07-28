@@ -285,6 +285,12 @@ export async function bulkSend(
     ]);
     const data = iface.encodeFunctionData('bulkSend', [recipients, amountsWei, label]);
 
+    const provider = getRpcProvider();
+    const feeData = await provider.getFeeData();
+    const baseFee = feeData.gasPrice || ethers.parseUnits('20', 'gwei');
+    const maxFeePerGas = baseFee * 2n;
+    const maxPriorityFeePerGas = baseFee;
+
     const txHash = await window.ethereum.request({
       method: 'eth_sendTransaction',
       params: [{
@@ -292,7 +298,9 @@ export async function bulkSend(
         to: import.meta.env.VITE_BULKPAYOUT_CONTRACT,
         data,
         value: '0x' + total.toString(16),
-        gas: '0x' + (200000 + recipients.length * 60000).toString(16)
+        gas: '0x' + (200000 + recipients.length * 60000).toString(16),
+        maxFeePerGas: '0x' + maxFeePerGas.toString(16),
+        maxPriorityFeePerGas: '0x' + maxPriorityFeePerGas.toString(16)
       }]
     });
 
