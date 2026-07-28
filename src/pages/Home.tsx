@@ -25,7 +25,8 @@ const WELCOME_MESSAGES = [
   "What's my zkLTC balance?",
   "Send 0.1 zkLTC to 0x742d...",
   "Show my transaction history",
-  "Schedule 0.01 zkLTC daily to 0x...",
+  "Split 0.1 zkLTC between two wallets",
+  "Bulk pay 5 wallets at once",
   "Analyze my spending this month",
 ];
 
@@ -389,9 +390,9 @@ const handleSplitConfirm = async (data: { description: string; recipients: { add
               <div className="grid grid-cols-2 gap-3 w-full max-w-sm">
                 {[
                   { icon: '💸', label: 'Send zkLTC', desc: 'Real transactions' },
+                  { icon: '👥', label: 'Split', desc: 'Request from many' },
+                  { icon: '📤', label: 'Bulk Pay', desc: 'Pay many at once' },
                   { icon: '⏰', label: 'Automate', desc: 'Schedule transfers' },
-                  { icon: '📊', label: 'Analytics', desc: 'AI spending stats' },
-                  { icon: '🔒', label: 'Safe', desc: 'You always sign' },
                 ].map((f) => (
                   <motion.div
                     key={f.label}

@@ -3,7 +3,7 @@ import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom';
 import { Zap, Shield, Clock, BarChart3, ArrowRight, Bot, Sparkles, Send, Brain } from 'lucide-react';
 
-const ROTATING_WORDS = ['Send zkLTC', 'Schedule Payments', 'Analyze Spending', 'Automate Transfers', 'Check Balance'];
+const ROTATING_WORDS = ['Send zkLTC', 'Schedule Payments', 'Split Bills', 'Bulk Payouts', 'Analyze Spending', 'Automate Transfers', 'Check Balance'];
 
 const FEATURES = [
   {
@@ -21,6 +21,22 @@ const FEATURES = [
     color: '#8b5cf6',
     bg: 'from-purple-50 to-purple-100/50',
     border: 'border-purple-200',
+  },
+  {
+    icon: Bot,
+    title: 'Split Payments',
+    desc: 'Request money from multiple wallets with one link. Equal or custom splits, tracked until everyone pays.',
+    color: '#6366f1',
+    bg: 'from-indigo-50 to-indigo-100/50',
+    border: 'border-indigo-200',
+  },
+  {
+    icon: Zap,
+    title: 'Bulk Payouts',
+    desc: 'Pay up to 20 wallets in a single atomic transaction, straight from a smart contract. Payroll made simple.',
+    color: '#10b981',
+    bg: 'from-teal-50 to-teal-100/50',
+    border: 'border-teal-200',
   },
   {
     icon: Clock,
