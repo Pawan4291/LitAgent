@@ -1,18 +1,20 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { History as HistoryIcon, Sparkles, Download, ExternalLink, Users, Copy } from 'lucide-react';
+import { History as HistoryIcon, Sparkles, Download, ExternalLink, Users, Copy, Send } from 'lucide-react';
 import { useWallet } from '../hooks/useWallet';
 import { getOnChainHistory } from '../services/ethers';
 import { generateSpendingStats } from '../services/claude';
 import { LITVM_CHAIN } from '../config/litvm';
 import { getSplitsByCreator, SplitRequestRecord } from '../services/splitRequest';
+import { getBulkHistory } from '../services/ethers';
 
 export default function History() {
   const wallet = useWallet();
   const initialTab = new URLSearchParams(window.location.search).get('tab') === 'splits' ? 'splits' : 'history';
-  const [tab, setTab] = useState<'history' | 'stats' | 'splits'>(initialTab as any);
+  const [tab, setTab] = useState<'history' | 'stats' | 'splits' | 'bulk'>(initialTab as any);
   const [history, setHistory] = useState<any[]>([]);
   const [splits, setSplits] = useState<SplitRequestRecord[]>([]);
+  const [bulkPayouts, setBulkPayouts] = useState<any[]>([]);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [aiSummary, setAiSummary] = useState('');
@@ -32,6 +34,9 @@ export default function History() {
     getSplitsByCreator(wallet.account).then((records) => {
       setSplits([...records].sort((a, b) => b.createdAt - a.createdAt));
     });
+    getBulkHistory(wallet.account).then((records) => {
+      setBulkPayouts([...records].reverse());
+    });
   }, [wallet.account]);
 
   const copySplitLink = (id: string) => {
@@ -39,6 +44,18 @@ export default function History() {
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 1500);
   };
+
+  const bulkEntries = bulkPayouts.flatMap((p) =>
+    p.recipients.map((addr: string, i: number) => ({
+      type: 'bulk' as const,
+      amount: (Number(p.amounts[i]) / 1e18).toString(),
+      token: 'zkLTC',
+      address: addr,
+      hash: '',
+      timestamp: Number(p.timestamp),
+      description: p.label || 'Bulk Payout',
+    }))
+  );
 
   const splitPayments = splits.flatMap((s) =>
     s.recipients
@@ -63,6 +80,7 @@ export default function History() {
       timestamp: Number(h.timestamp),
     })),
     ...splitPayments,
+    ...bulkEntries,
   ].sort((a, b) => b.timestamp - a.timestamp);
 
  const handleAISummary = async () => {
@@ -117,10 +135,10 @@ export default function History() {
         </motion.div>
 
         <div className="flex gap-1 p-1 bg-slate-100/80 rounded-2xl mb-6">
-          {(['history', 'splits', 'stats'] as const).map(t => (
+          {(['history', 'splits', 'bulk', 'stats'] as const).map(t => (
             <button key={t} onClick={() => setTab(t)}
               className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 ${tab === t ? 'bg-white text-slate-800 shadow-md' : 'text-slate-500'}`}>
-              {t === 'history' ? <><HistoryIcon className="w-4 h-4" />Transactions</> : t === 'splits' ? <><Users className="w-4 h-4" />Splits</> : <><Sparkles className="w-4 h-4" />Analytics</>}
+              {t === 'history' ? <><HistoryIcon className="w-4 h-4" />Transactions</> : t === 'splits' ? <><Users className="w-4 h-4" />Splits</> : t === 'bulk' ? <><Send className="w-4 h-4" />Bulk</> : <><Sparkles className="w-4 h-4" />Analytics</>}
             </button>
           ))}
         </div>
@@ -157,6 +175,31 @@ export default function History() {
                 ))}
               </div>
             )
+          ) : tab === 'bulk' ? (
+            bulkPayouts.length === 0 ? (
+              <div className="text-center py-10">
+                <p className="text-slate-400 text-sm">No bulk payouts sent yet.</p>
+                <p className="text-slate-400 text-xs mt-1">Ask LitAgent to bulk send to see it here.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-xs text-slate-500 font-semibold mb-2">{bulkPayouts.length} BULK PAYOUTS</p>
+                {bulkPayouts.map((p, i) => (
+                  <div key={i} className="p-3 rounded-2xl bg-teal-50 border border-teal-100">
+                    <p className="text-sm font-semibold text-slate-700 mb-2">{p.label || 'Bulk Payout'}</p>
+                    <div className="space-y-1">
+                      {p.recipients.map((addr: string, j: number) => (
+                        <div key={addr} className="flex justify-between text-xs">
+                          <span className="font-mono text-slate-500">{addr.slice(0,8)}...{addr.slice(-4)}</span>
+                          <span className="font-semibold text-slate-600">{(Number(p.amounts[j]) / 1e18)} zkLTC</span>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-slate-400 mt-2">{new Date(Number(p.timestamp) * 1000).toLocaleString()}</p>
+                  </div>
+                ))}
+              </div>
+            )
           ) : tab === 'history' ? (
             isLoading ? (
               <p className="text-center text-slate-400 py-10">Loading...</p>
@@ -169,11 +212,17 @@ export default function History() {
               <div className="space-y-3 pt-2">
                 <p className="text-xs text-slate-500 font-semibold mb-2">{combinedHistory.length} EXECUTIONS</p>
                 {combinedHistory.map((h, i) => (
-                  <div key={i} className={`relative p-3 rounded-2xl border flex items-center justify-between ${h.type === 'split' ? 'bg-indigo-50 border-indigo-100' : 'bg-emerald-50 border-emerald-100'}`}>
+                  <div key={i} className={`relative p-3 rounded-2xl border flex items-center justify-between ${h.type === 'split' ? 'bg-indigo-50 border-indigo-100' : h.type === 'bulk' ? 'bg-teal-50 border-teal-100' : 'bg-emerald-50 border-emerald-100'}`}>
                     {h.type === 'split' && (
                       <span className="absolute -top-2 left-3 px-2 py-0.5 rounded-full text-[10px] font-bold text-white"
                         style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}>
                         REQUEST PAYMENT
+                      </span>
+                    )}
+                    {h.type === 'bulk' && (
+                      <span className="absolute -top-2 left-3 px-2 py-0.5 rounded-full text-[10px] font-bold text-white"
+                        style={{ background: 'linear-gradient(135deg, #10b981, #0d9488)' }}>
+                        BULK PAYOUT
                       </span>
                     )}
                     <div className="space-y-0.5">
@@ -182,16 +231,21 @@ export default function History() {
                           <p className="text-xs font-bold text-emerald-700">✅ Executed — Job #{h.jobId}</p>
                           <p className="text-sm font-semibold text-slate-700">{h.amount} zkLTC → <span className="font-mono text-xs">{h.to.slice(0,8)}...{h.to.slice(-4)}</span></p>
                         </>
-                      ) : (
+                      ) : h.type === 'split' ? (
                         <>
                           <p className="text-xs font-bold text-indigo-700 mt-1">💜 {h.description}</p>
                           <p className="text-sm font-semibold text-slate-700">{h.amount} {h.token} ← <span className="font-mono text-xs">{h.address.slice(0,8)}...{h.address.slice(-4)}</span></p>
                         </>
+                      ) : (
+                        <>
+                          <p className="text-xs font-bold text-teal-700 mt-1">📤 {h.description}</p>
+                          <p className="text-sm font-semibold text-slate-700">{h.amount} {h.token} → <span className="font-mono text-xs">{h.address.slice(0,8)}...{h.address.slice(-4)}</span></p>
+                        </>
                       )}
                       <p className="text-xs text-slate-400">{new Date(h.timestamp * 1000).toLocaleString()}</p>
                     </div>
-                    <a href={h.type === 'schedule' ? `${LITVM_CHAIN.explorerUrl}/address/${import.meta.env.VITE_SCHEDULER_CONTRACT}` : `${LITVM_CHAIN.explorerUrl}/tx/${h.hash}`}
-                      target="_blank" rel="noreferrer" className={h.type === 'split' ? 'text-indigo-500' : 'text-blue-500'}>
+                    <a href={h.type === 'schedule' ? `${LITVM_CHAIN.explorerUrl}/address/${import.meta.env.VITE_SCHEDULER_CONTRACT}` : h.type === 'bulk' ? `${LITVM_CHAIN.explorerUrl}/address/${import.meta.env.VITE_BULKPAYOUT_CONTRACT}` : `${LITVM_CHAIN.explorerUrl}/tx/${h.hash}`}
+                      target="_blank" rel="noreferrer" className={h.type === 'split' ? 'text-indigo-500' : h.type === 'bulk' ? 'text-teal-500' : 'text-blue-500'}>
                       <ExternalLink className="w-4 h-4" />
                     </a>
                   </div>
