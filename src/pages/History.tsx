@@ -5,8 +5,9 @@ import { useWallet } from '../hooks/useWallet';
 import { getOnChainHistory } from '../services/ethers';
 import { generateSpendingStats } from '../services/claude';
 import { LITVM_CHAIN } from '../config/litvm';
-import { getSplitsByCreator, SplitRequestRecord } from '../services/splitRequest';
+import { getSplitsByCreator, getSplitsForRecipient, SplitRequestRecord } from '../services/splitRequest';
 import { getBulkHistory } from '../services/ethers';
+import { getBulkLogsBySender, getBulkLogsByRecipient } from '../services/bulkLog';
 
 export default function History() {
   const wallet = useWallet();
@@ -15,6 +16,8 @@ export default function History() {
   const [history, setHistory] = useState<any[]>([]);
   const [splits, setSplits] = useState<SplitRequestRecord[]>([]);
   const [bulkPayouts, setBulkPayouts] = useState<any[]>([]);
+  const [receivedSplits, setReceivedSplits] = useState<SplitRequestRecord[]>([]);
+  const [receivedBulk, setReceivedBulk] = useState<any[]>([]);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [aiSummary, setAiSummary] = useState('');
@@ -37,6 +40,12 @@ export default function History() {
     getBulkHistory(wallet.account).then((records) => {
       setBulkPayouts([...records].reverse());
     });
+    getSplitsForRecipient(wallet.account).then((records) => {
+      setReceivedSplits([...records].sort((a, b) => b.createdAt - a.createdAt));
+    });
+    getBulkLogsByRecipient(wallet.account).then((records) => {
+      setReceivedBulk([...records].sort((a, b) => b.timestamp - a.timestamp));
+    });
   }, [wallet.account]);
 
   const copySplitLink = (id: string) => {
@@ -44,6 +53,34 @@ export default function History() {
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 1500);
   };
+
+  const receivedSplitPayments = receivedSplits.flatMap((s) =>
+    s.recipients
+      .filter((r) => r.address.toLowerCase() === (wallet.account || '').toLowerCase() && r.paid)
+      .map((r) => ({
+        type: 'split-received' as const,
+        amount: r.amount,
+        token: s.token,
+        address: s.creator,
+        hash: r.txHash || '',
+        timestamp: Math.floor(s.createdAt / 1000),
+        description: s.description,
+      }))
+  );
+
+  const receivedBulkEntries = receivedBulk.flatMap((log) =>
+    log.recipients
+      .filter((r: any) => r.address.toLowerCase() === (wallet.account || '').toLowerCase())
+      .map((r: any) => ({
+        type: 'bulk-received' as const,
+        amount: r.amount,
+        token: 'zkLTC',
+        address: log.sender,
+        hash: log.hash,
+        timestamp: Math.floor(log.timestamp / 1000),
+        description: log.label,
+      }))
+  );
 
   const bulkEntries = bulkPayouts.flatMap((p) =>
     p.recipients.map((addr: string, i: number) => ({
@@ -81,6 +118,8 @@ export default function History() {
     })),
     ...splitPayments,
     ...bulkEntries,
+    ...receivedSplitPayments,
+    ...receivedBulkEntries,
   ].sort((a, b) => b.timestamp - a.timestamp);
 
  const handleAISummary = async () => {
@@ -212,17 +251,17 @@ export default function History() {
               <div className="space-y-3 pt-2">
                 <p className="text-xs text-slate-500 font-semibold mb-2">{combinedHistory.length} EXECUTIONS</p>
                 {combinedHistory.map((h, i) => (
-                  <div key={i} className={`relative p-3 rounded-2xl border flex items-center justify-between ${h.type === 'split' ? 'bg-indigo-50 border-indigo-100' : h.type === 'bulk' ? 'bg-teal-50 border-teal-100' : 'bg-emerald-50 border-emerald-100'}`}>
-                    {h.type === 'split' && (
+                  <div key={i} className={`relative p-3 rounded-2xl border flex items-center justify-between ${h.type === 'split' || h.type === 'split-received' ? 'bg-indigo-50 border-indigo-100' : h.type === 'bulk' || h.type === 'bulk-received' ? 'bg-teal-50 border-teal-100' : 'bg-emerald-50 border-emerald-100'}`}>
+                    {(h.type === 'split' || h.type === 'split-received') && (
                       <span className="absolute -top-2 left-3 px-2 py-0.5 rounded-full text-[10px] font-bold text-white"
                         style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}>
-                        REQUEST PAYMENT
+                        {h.type === 'split' ? 'REQUEST PAYMENT' : 'PAID SPLIT'}
                       </span>
                     )}
-                    {h.type === 'bulk' && (
+                    {(h.type === 'bulk' || h.type === 'bulk-received') && (
                       <span className="absolute -top-2 left-3 px-2 py-0.5 rounded-full text-[10px] font-bold text-white"
                         style={{ background: 'linear-gradient(135deg, #10b981, #0d9488)' }}>
-                        BULK PAYOUT
+                        {h.type === 'bulk' ? 'BULK PAYOUT' : 'RECEIVED BULK'}
                       </span>
                     )}
                     <div className="space-y-0.5">
@@ -236,16 +275,26 @@ export default function History() {
                           <p className="text-xs font-bold text-indigo-700 mt-1">💜 {h.description}</p>
                           <p className="text-sm font-semibold text-slate-700">{h.amount} {h.token} ← <span className="font-mono text-xs">{h.address.slice(0,8)}...{h.address.slice(-4)}</span></p>
                         </>
-                      ) : (
+                      ) : h.type === 'split-received' ? (
+                        <>
+                          <p className="text-xs font-bold text-indigo-700 mt-1">💜 {h.description}</p>
+                          <p className="text-sm font-semibold text-slate-700">{h.amount} {h.token} → <span className="font-mono text-xs">{h.address.slice(0,8)}...{h.address.slice(-4)}</span></p>
+                        </>
+                      ) : h.type === 'bulk' ? (
                         <>
                           <p className="text-xs font-bold text-teal-700 mt-1">📤 {h.description}</p>
                           <p className="text-sm font-semibold text-slate-700">{h.amount} {h.token} → <span className="font-mono text-xs">{h.address.slice(0,8)}...{h.address.slice(-4)}</span></p>
                         </>
+                      ) : (
+                        <>
+                          <p className="text-xs font-bold text-teal-700 mt-1">📥 {h.description}</p>
+                          <p className="text-sm font-semibold text-slate-700">{h.amount} {h.token} ← <span className="font-mono text-xs">{h.address.slice(0,8)}...{h.address.slice(-4)}</span></p>
+                        </>
                       )}
                       <p className="text-xs text-slate-400">{new Date(h.timestamp * 1000).toLocaleString()}</p>
                     </div>
-                    <a href={h.type === 'schedule' ? `${LITVM_CHAIN.explorerUrl}/address/${import.meta.env.VITE_SCHEDULER_CONTRACT}` : h.type === 'bulk' ? `${LITVM_CHAIN.explorerUrl}/address/${import.meta.env.VITE_BULKPAYOUT_CONTRACT}` : `${LITVM_CHAIN.explorerUrl}/tx/${h.hash}`}
-                      target="_blank" rel="noreferrer" className={h.type === 'split' ? 'text-indigo-500' : h.type === 'bulk' ? 'text-teal-500' : 'text-blue-500'}>
+                    <a href={h.type === 'schedule' ? `${LITVM_CHAIN.explorerUrl}/address/${import.meta.env.VITE_SCHEDULER_CONTRACT}` : (h.type === 'bulk' || h.type === 'bulk-received') ? `${LITVM_CHAIN.explorerUrl}/address/${import.meta.env.VITE_BULKPAYOUT_CONTRACT}` : `${LITVM_CHAIN.explorerUrl}/tx/${h.hash}`}
+                      target="_blank" rel="noreferrer" className={(h.type === 'split' || h.type === 'split-received') ? 'text-indigo-500' : (h.type === 'bulk' || h.type === 'bulk-received') ? 'text-teal-500' : 'text-blue-500'}>
                       <ExternalLink className="w-4 h-4" />
                     </a>
                   </div>

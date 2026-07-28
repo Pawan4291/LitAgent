@@ -70,6 +70,10 @@ export default async function handler(req, res) {
       recipient.paid = true;
       recipient.txHash = txHash;
 
+      await fetch(`${UPSTASH_URL}/sadd/splits:recipient:${address.toLowerCase()}/${id}`, {
+        headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
+      });
+
       await fetch(`${UPSTASH_URL}/set/split:${id}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
@@ -82,6 +86,26 @@ export default async function handler(req, res) {
 
     if (req.method === 'GET') {
       const { id, creator } = req.query;
+
+      const { recipient } = req.query;
+      if (recipient && !id) {
+        const membersRes = await fetch(`${UPSTASH_URL}/smembers/splits:recipient:${recipient.toLowerCase()}`, {
+          headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
+        });
+        const membersData = await membersRes.json();
+        const ids = membersData.result || [];
+        const records = await Promise.all(
+          ids.map(async (splitId) => {
+            const r = await fetch(`${UPSTASH_URL}/get/split:${splitId}`, {
+              headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
+            });
+            const d = await r.json();
+            return d.result ? JSON.parse(d.result) : null;
+          })
+        );
+        res.status(200).json({ success: true, records: records.filter(Boolean) });
+        return;
+      }
 
       if (creator && !id) {
         const membersRes = await fetch(`${UPSTASH_URL}/smembers/splits:${creator.toLowerCase()}`, {

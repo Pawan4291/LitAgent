@@ -3,6 +3,7 @@ import SplitRequestModal from '../components/SplitRequestModal';
 import { createSplitRequest } from '../services/splitRequest';
 import BulkPayoutModal from '../components/BulkPayoutModal';
 import { bulkSend } from '../services/ethers';
+import { logBulkPayout } from '../services/bulkLog';
 import { getOnChainHistory, getOnChainJobs } from '../services/ethers';
 import { createOnChainJob } from '../services/ethers';
 import { useRef, useEffect, useState, useCallback } from 'react';
@@ -278,6 +279,7 @@ const handleBulkConfirm = async (data: { description: string; recipients: { addr
     data.description
   );
   if (result.success) {
+    await logBulkPayout(wallet.account || '', data.description, data.recipients, result.hash);
     addAgentMessage(
       `✅ Bulk payout sent to ${data.recipients.length} wallets!\n\nTx: \`${result.hash}\``,
       { ...bulkAction!, action: 'bulk' } as AgentAction,

@@ -64,6 +64,16 @@ export async function getSplitRequest(id: string): Promise<SplitRequestRecord | 
   }
 }
 
+export async function getSplitsForRecipient(recipient: string): Promise<SplitRequestRecord[]> {
+  try {
+    const res = await fetch(`/api/splitRequest?recipient=${recipient}`);
+    const data = await res.json();
+    return data.success ? data.records : [];
+  } catch {
+    return [];
+  }
+}
+
 export async function getSplitsByCreator(creator: string): Promise<SplitRequestRecord[]> {
   try {
     const res = await fetch(`/api/splitRequest?creator=${creator}`);
