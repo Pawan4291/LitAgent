@@ -15,6 +15,8 @@ const QUICK_COMMANDS = [
   { label: '📜 View History', command: 'Show my recent transaction history' },
   { label: '📊 Spending Stats', command: 'Give me a summary of my spending stats' },
   { label: '⏰ Daily Send', command: 'Schedule daily 0.01 zkLTC send to 0x...' },
+  { label: '👥 Request Payment', command: 'Split payment request' },
+  { label: '📤 Bulk Payout', command: 'Bulk payment form' },
   { label: '❓ Help', command: 'What can you do?' },
 ];
 

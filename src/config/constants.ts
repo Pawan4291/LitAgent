@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 export const CLAUDE_API_URL = "https://api.groq.com/openai/v1/chat/completions";
-export const CLAUDE_MODEL = "llama-3.3-70b-versatile";
+export const CLAUDE_MODEL = "openai/gpt-oss-120b";
 export const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY || "";
 
 // Goldsky — fallback to RPC if subgraph not deployed
