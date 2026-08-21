@@ -20,6 +20,7 @@ import { sendZkLTC, estimateGas, isValidAddress } from '../services/ethers';
 import { addJob, parseScheduleToMs, isRecurring } from '../services/scheduler';
 import { STORAGE_KEYS } from '../config/constants';
 import { AgentAction } from '../services/claude';
+import { getTemplates, TemplateRecord } from '../services/templates';
 
 const WELCOME_MESSAGES = [
   "What's my zkLTC balance?",
@@ -47,6 +48,13 @@ export default function Home() {
   const [txResult, setTxResult] = useState<{ hash: string; success: boolean; error?: string } | null>(null);
   const [estimatedGas, setEstimatedGas] = useState<string>('');
   const [welcomeIdx, setWelcomeIdx] = useState(0);
+  const [templates, setTemplates] = useState<TemplateRecord[]>([]);
+
+  const refreshTemplates = useCallback(() => {
+    if (wallet.account) getTemplates(wallet.account).then(setTemplates);
+  }, [wallet.account]);
+
+  useEffect(() => { refreshTemplates(); }, [refreshTemplates]);
 
   // Rotate welcome examples
   useEffect(() => {
@@ -475,6 +483,9 @@ const handleSplitConfirm = async (data: { description: string; recipients: { add
       isConnected={wallet.isConnected}
       onClearHistory={clearHistory}
       hasMessages={hasMessages}
+      templates={templates}
+      walletAddress={wallet.account || ''}
+      onTemplateSaved={refreshTemplates}
     />
   </div>
 </div>

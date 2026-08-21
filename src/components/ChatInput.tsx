@@ -1,6 +1,7 @@
 import { useState, useRef, KeyboardEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Mic, Sparkles, ChevronDown, Trash2 } from 'lucide-react';
+import { Send, Mic, Sparkles, ChevronDown, Trash2, Bookmark, BookmarkPlus } from 'lucide-react';
+import { TemplateRecord, saveTemplate } from '../services/templates';
 
 interface ChatInputProps {
   onSend: (message: string) => void;
@@ -8,6 +9,9 @@ interface ChatInputProps {
   isConnected?: boolean;
   onClearHistory?: () => void;
   hasMessages?: boolean;
+  templates?: TemplateRecord[];
+  walletAddress?: string;
+  onTemplateSaved?: () => void;
 }
 
 const QUICK_COMMANDS = [
@@ -20,9 +24,17 @@ const QUICK_COMMANDS = [
   { label: '❓ Help', command: 'What can you do?' },
 ];
 
-export default function ChatInput({ onSend, isLoading, isConnected, onClearHistory, hasMessages }: ChatInputProps) {
+export default function ChatInput({ onSend, isLoading, isConnected, onClearHistory, hasMessages, templates, walletAddress, onTemplateSaved }: ChatInputProps) {
   const [input, setInput] = useState('');
   const [showQuick, setShowQuick] = useState(false);
+
+  const handleSaveTemplate = async () => {
+    if (!input.trim() || !walletAddress) return;
+    const label = window.prompt('Save this as a template. Give it a short name:');
+    if (!label) return;
+    const ok = await saveTemplate(walletAddress, label, input.trim());
+    if (ok && onTemplateSaved) onTemplateSaved();
+  };
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleSend = () => {
@@ -86,6 +98,21 @@ export default function ChatInput({ onSend, isLoading, isConnected, onClearHisto
           )}
         </AnimatePresence>
 
+        {templates && templates.length > 0 && !showQuick && (
+          <div className="flex gap-2 overflow-x-auto pb-1 flex-1">
+            {templates.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => { setInput(t.command); textareaRef.current?.focus(); }}
+                className="flex-shrink-0 flex items-center gap-1 text-xs px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 text-amber-700 hover:from-amber-100 hover:to-orange-100 font-medium transition-all"
+              >
+                <Bookmark className="w-3 h-3" />
+                {t.label}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Clear chat — same row, right side */}
         {hasMessages && onClearHistory && !showQuick && (
           <button
@@ -129,6 +156,14 @@ export default function ChatInput({ onSend, isLoading, isConnected, onClearHisto
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={handleSaveTemplate}
+            disabled={!input.trim()}
+            className="p-2 rounded-xl text-slate-400 hover:text-amber-500 hover:bg-amber-50 transition-all disabled:opacity-30"
+            title="Save as template"
+          >
+            <BookmarkPlus className="w-4 h-4" />
+          </button>
           <button
             className="p-2 rounded-xl text-slate-400 hover:text-blue-500 hover:bg-blue-50 transition-all"
             title="Voice input (coming soon)"
