@@ -1,7 +1,7 @@
 import { useState, useRef, KeyboardEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Mic, Sparkles, ChevronDown, Trash2, Bookmark, BookmarkPlus } from 'lucide-react';
-import { TemplateRecord, saveTemplate } from '../services/templates';
+import { TemplateRecord, saveTemplate, deleteTemplate } from '../services/templates';
 
 interface ChatInputProps {
   onSend: (message: string) => void;
@@ -101,14 +101,30 @@ export default function ChatInput({ onSend, isLoading, isConnected, onClearHisto
         {templates && templates.length > 0 && !showQuick && (
           <div className="flex gap-2 overflow-x-auto pb-1 flex-1">
             {templates.map((t) => (
-              <button
+              <div
                 key={t.id}
-                onClick={() => { setInput(t.command); textareaRef.current?.focus(); }}
-                className="flex-shrink-0 flex items-center gap-1 text-xs px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 text-amber-700 hover:from-amber-100 hover:to-orange-100 font-medium transition-all"
+                className="flex-shrink-0 flex items-center gap-1 text-xs pl-3 pr-1 py-1.5 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 text-amber-700 font-medium"
               >
-                <Bookmark className="w-3 h-3" />
-                {t.label}
-              </button>
+                <button
+                  onClick={() => { setInput(t.command); textareaRef.current?.focus(); }}
+                  className="flex items-center gap-1 hover:text-amber-900"
+                >
+                  <Bookmark className="w-3 h-3" />
+                  {t.label}
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!walletAddress) return;
+                    if (!window.confirm(`Remove "${t.label}"?`)) return;
+                    await deleteTemplate(walletAddress, t.id);
+                    onTemplateSaved?.();
+                  }}
+                  className="ml-1 w-4 h-4 rounded-full flex items-center justify-center text-amber-400 hover:text-red-500 hover:bg-red-50"
+                  title="Remove template"
+                >
+                  ×
+                </button>
+              </div>
             ))}
           </div>
         )}
