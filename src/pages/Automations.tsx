@@ -6,7 +6,7 @@ import { loadJobs, getDueJobs, markJobRan, ScheduledJob } from '../services/sche
 import { sendZkLTC, getOnChainJobs, cancelOnChainJob, withdrawFromContract } from '../services/ethers';
 import { useWallet } from '../hooks/useWallet';
 import { LITVM_CHAIN } from '../config/litvm';
-import { BellRing } from 'lucide-react';
+import { BellRing, Zap as ZapIcon } from 'lucide-react';
 import { getReminders, deleteReminder, ReminderRecord } from '../services/reminders';
 
 export default function Automations() {
@@ -20,6 +20,7 @@ export default function Automations() {
   const [recentRuns, setRecentRuns] = useState<{ id: string; hash: string; success: boolean; ts: number }[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [reminders, setReminders] = useState<ReminderRecord[]>([]);
+  const [tab, setTab] = useState<'schedule' | 'reminders'>('schedule');
 
   const refreshReminders = useCallback(() => {
     if (wallet.account) getReminders(wallet.account).then((r) => setReminders(r.filter(x => x.active)));
@@ -174,7 +175,16 @@ const formatInterval = (s: any) => {
           </button>
         </div>
 
-        {hasInactiveJobs && (
+        <div className="flex gap-1 p-1 bg-slate-100/80 rounded-2xl">
+          {(['schedule', 'reminders'] as const).map(t => (
+            <button key={t} onClick={() => setTab(t)}
+              className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 ${tab === t ? 'bg-white text-slate-800 shadow-md' : 'text-slate-500'}`}>
+              {t === 'schedule' ? <><ZapIcon className="w-4 h-4" />Schedule</> : <><BellRing className="w-4 h-4" />Reminders</>}
+            </button>
+          ))}
+        </div>
+
+        {tab === 'schedule' && hasInactiveJobs && (
           parseFloat(contractBalance) > 0 ? (
             <button onClick={handleWithdraw} disabled={withdrawing}
               className="w-full py-3 rounded-2xl text-white font-bold text-sm disabled:opacity-50"
@@ -188,7 +198,7 @@ const formatInterval = (s: any) => {
           )
         )}
 
-        <div className="grid grid-cols-3 gap-3">
+        {tab === 'schedule' && <div className="grid grid-cols-3 gap-3">
           {[
             { label: 'On-Chain Jobs', value: onChainJobs.length },
             { label: 'Active', value: onChainJobs.filter(item => item.job.active).length },
@@ -200,9 +210,9 @@ const formatInterval = (s: any) => {
               <p className="text-xs text-slate-500 font-medium mt-1">{s.label}</p>
             </motion.div>
           ))}
-        </div>
+        </div>}
 
-        <div className="bg-white/80 rounded-3xl border border-slate-100 shadow-xl p-5">
+        {tab === 'schedule' && <div className="bg-white/80 rounded-3xl border border-slate-100 shadow-xl p-5">
           <h2 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
             <Zap className="w-4 h-4 text-purple-500" /> On-Chain Scheduled Jobs
           </h2>
@@ -246,9 +256,9 @@ const formatInterval = (s: any) => {
               ))}
             </div>
           )}
-        </div>
+        </div>}
 
-        {recentRuns.length > 0 && (
+        {tab === 'schedule' && recentRuns.length > 0 && (
           <div className="p-4 rounded-2xl bg-white/80 border border-slate-100 shadow-sm">
             <h3 className="text-sm font-semibold text-slate-700 mb-3">Recent Runs</h3>
             <div className="space-y-2">
@@ -268,12 +278,12 @@ const formatInterval = (s: any) => {
           </div>
         )}
 
-        <div className="flex gap-3 p-4 rounded-2xl bg-blue-50/80 border border-blue-200">
+        {tab === 'schedule' && <div className="flex gap-3 p-4 rounded-2xl bg-blue-50/80 border border-blue-200">
           <Info className="w-5 h-5 text-blue-500 flex-shrink-0" />
           <p className="text-xs text-blue-600">On-chain jobs execute automatically. Cancel anytime — remaining funds stay in contract until withdrawn.</p>
-        </div>
+        </div>}
 
-        <div className="bg-white/80 rounded-3xl border border-slate-100 shadow-xl p-5">
+        {tab === 'reminders' && <div className="bg-white/80 rounded-3xl border border-slate-100 shadow-xl p-5">
           <h2 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
             <BellRing className="w-4 h-4 text-pink-500" /> Payment Reminders
           </h2>
@@ -300,7 +310,7 @@ const formatInterval = (s: any) => {
               ))}
             </div>
           )}
-        </div>
+        </div>}
 
       </div>
     </div>
