@@ -357,10 +357,10 @@ const handleBulkConfirm = async (data: { description: string; recipients: { addr
   }
 };
 
-const handleReminderConfirm = async (data: { label: string; to: string | null; amount: string | null; startAt: number; intervalMs: number }) => {
+const handleReminderConfirm = async (data: { label: string; to: string | null; amount: string | null; startAt: number; intervalMs: number | null; repeatUntil: number | null }) => {
   setShowReminder(false);
   if (!wallet.account) return;
-  const ok = await createReminder(wallet.account, data.label, data.to, data.amount, data.startAt, data.intervalMs);
+  const ok = await createReminder(wallet.account, data.label, data.to, data.amount, data.startAt, data.intervalMs, data.repeatUntil);
   addAgentMessage(ok ? `✅ Reminder set: **${data.label}**, starting ${new Date(data.startAt).toLocaleString()}.\n\n<a href="/automations" style="color:#ec4899;font-weight:600;">→ Check your reminders here</a>` : `❌ Failed to set reminder.`);
 };
 

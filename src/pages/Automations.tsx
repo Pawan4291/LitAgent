@@ -7,7 +7,7 @@ import { sendZkLTC, getOnChainJobs, cancelOnChainJob, withdrawFromContract } fro
 import { useWallet } from '../hooks/useWallet';
 import { LITVM_CHAIN } from '../config/litvm';
 import { BellRing, Zap as ZapIcon } from 'lucide-react';
-import { getReminders, deleteReminder, ReminderRecord } from '../services/reminders';
+import { getReminders, deleteReminder, markReminderPaid, ReminderRecord } from '../services/reminders';
 
 export default function Automations() {
   const [contractBalance, setContractBalance] = useState('0');
@@ -20,6 +20,8 @@ export default function Automations() {
   const [recentRuns, setRecentRuns] = useState<{ id: string; hash: string; success: boolean; ts: number }[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [reminders, setReminders] = useState<ReminderRecord[]>([]);
+  const [payingId, setPayingId] = useState<string | null>(null);
+  const [justPaidId, setJustPaidId] = useState<string | null>(null);
   const [tab, setTab] = useState<'schedule' | 'reminders'>('schedule');
 
   const refreshReminders = useCallback(() => {
@@ -33,6 +35,22 @@ export default function Automations() {
     if (!window.confirm('Cancel this reminder permanently?')) return;
     await deleteReminder(wallet.account, id);
     refreshReminders();
+  };
+
+  const handlePayReminder = async (r: ReminderRecord) => {
+    if (!wallet.account || !r.to || !r.amount) return;
+    if (!window.confirm(`Send ${r.amount} zkLTC to ${r.to.slice(0,8)}...?`)) return;
+    setPayingId(r.id);
+    try {
+      const result = await sendZkLTC(r.to, r.amount);
+      if (result.success) {
+        await markReminderPaid(wallet.account, r.id);
+        setJustPaidId(r.id);
+        setTimeout(() => refreshReminders(), 1500);
+      }
+    } finally {
+      setPayingId(null);
+    }
   };
 
   const refresh = useCallback(() => setJobs(loadJobs()), []);
@@ -292,7 +310,7 @@ const formatInterval = (s: any) => {
           ) : (
             <div className="space-y-3">
               {reminders.map((r) => (
-                <div key={r.id} className="p-4 rounded-2xl border bg-pink-50 border-pink-200 flex items-start justify-between">
+                <div key={r.id} className={`p-4 rounded-2xl border flex items-start justify-between transition-colors ${justPaidId === r.id ? 'bg-emerald-50 border-emerald-300' : 'bg-pink-50 border-pink-200'}`}>
                   <div className="space-y-1">
                     <p className="text-sm font-semibold text-slate-700">{r.label}</p>
                     {(r.amount || r.to) && (
@@ -300,12 +318,24 @@ const formatInterval = (s: any) => {
                         {r.amount ? `${r.amount} zkLTC` : ''}{r.amount && r.to ? ' → ' : ''}{r.to ? `${r.to.slice(0,8)}...${r.to.slice(-4)}` : ''}
                       </p>
                     )}
-                    <p className="text-xs text-pink-600 font-medium">Next: {new Date(r.nextDue).toLocaleString()}</p>
+                    <p className={`text-xs font-medium ${justPaidId === r.id ? 'text-emerald-600' : 'text-pink-600'}`}>
+                      {justPaidId === r.id ? '✅ Paid!' : `Next: ${new Date(r.nextDue).toLocaleString()}`}
+                    </p>
                   </div>
-                  <button onClick={() => handleDeleteReminder(r.id)}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-red-100 text-red-600 text-xs font-semibold hover:bg-red-200">
-                    <X className="w-3 h-3" /> Cancel
-                  </button>
+                  <div className="flex flex-col gap-2 flex-shrink-0">
+                    {r.to && r.amount && justPaidId !== r.id && (
+                      <button onClick={() => handlePayReminder(r)} disabled={payingId === r.id}
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-500 text-white text-xs font-semibold hover:bg-emerald-600 disabled:opacity-50">
+                        {payingId === r.id ? 'Sending...' : 'Pay Now'}
+                      </button>
+                    )}
+                    {justPaidId !== r.id && (
+                      <button onClick={() => handleDeleteReminder(r.id)}
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-red-100 text-red-600 text-xs font-semibold hover:bg-red-200">
+                        <X className="w-3 h-3" /> Cancel
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

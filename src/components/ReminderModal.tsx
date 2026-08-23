@@ -6,7 +6,7 @@ interface ReminderModalProps {
   isOpen: boolean;
   initialTo?: string;
   initialAmount?: string;
-  onConfirm: (data: { label: string; to: string | null; amount: string | null; startAt: number; intervalMs: number }) => void;
+  onConfirm: (data: { label: string; to: string | null; amount: string | null; startAt: number; intervalMs: number | null; repeatUntil: number | null }) => void;
   onCancel: () => void;
 }
 
@@ -19,16 +19,21 @@ const UNITS = [
 ];
 
 export default function ReminderModal({ isOpen, initialTo, initialAmount, onConfirm, onCancel }: ReminderModalProps) {
+  const [mode, setMode] = useState<'onetime' | 'recurring'>('onetime');
   const [label, setLabel] = useState('');
   const [to, setTo] = useState('');
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
   const [repeatValue, setRepeatValue] = useState(1);
-  const [unit, setUnit] = useState(UNITS[3]); // default: Weeks
+  const [unit, setUnit] = useState(UNITS[3]);
+  const [hasEndDate, setHasEndDate] = useState(false);
+  const [endDate, setEndDate] = useState('');
+  const [endTime, setEndTime] = useState('');
 
   useEffect(() => {
     if (isOpen) {
+      setMode('onetime');
       setLabel('');
       setTo(initialTo || '');
       setAmount(initialAmount || '');
@@ -37,12 +42,16 @@ export default function ReminderModal({ isOpen, initialTo, initialAmount, onConf
       setTime(d.toTimeString().slice(0, 5));
       setRepeatValue(1);
       setUnit(UNITS[3]);
+      setHasEndDate(false);
+      setEndDate('');
+      setEndTime('');
     }
   }, [isOpen]);
 
   const startAt = date && time ? new Date(`${date}T${time}`).getTime() : 0;
-  const intervalMs = repeatValue * unit.ms;
-  const isValid = label.trim().length > 0 && startAt > 0 && intervalMs > 0;
+  const intervalMs = mode === 'recurring' ? repeatValue * unit.ms : null;
+  const repeatUntil = mode === 'recurring' && hasEndDate && endDate && endTime ? new Date(`${endDate}T${endTime}`).getTime() : null;
+  const isValid = label.trim().length > 0 && startAt > 0 && (mode === 'onetime' || intervalMs! > 0);
 
   return (
     <AnimatePresence>
@@ -71,6 +80,17 @@ export default function ReminderModal({ isOpen, initialTo, initialAmount, onConf
               </button>
             </div>
 
+            <div className="grid grid-cols-2 gap-2 mb-4 p-1 bg-slate-100 rounded-2xl">
+              <button onClick={() => setMode('onetime')}
+                className={`py-2 rounded-xl text-sm font-semibold transition-all ${mode === 'onetime' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400'}`}>
+                One-time
+              </button>
+              <button onClick={() => setMode('recurring')}
+                className={`py-2 rounded-xl text-sm font-semibold transition-all ${mode === 'recurring' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400'}`}>
+                Recurring
+              </button>
+            </div>
+
             <div className="mb-4">
               <label className="text-xs font-semibold text-slate-500 mb-1 block">REMIND ME TO</label>
               <input type="text" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="e.g. Pay rent"
@@ -90,7 +110,7 @@ export default function ReminderModal({ isOpen, initialTo, initialAmount, onConf
             </div>
 
             <div className="mb-4">
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">FIRST REMINDER AT</label>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">{mode === 'onetime' ? 'REMIND ME AT' : 'FIRST REMINDER AT'}</label>
               <div className="flex gap-2">
                 <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
                   className="flex-1 px-3 py-2.5 rounded-2xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:border-pink-400" />
@@ -99,27 +119,50 @@ export default function ReminderModal({ isOpen, initialTo, initialAmount, onConf
               </div>
             </div>
 
-            <div className="mb-6">
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">REPEAT EVERY</label>
-              <div className="flex gap-2">
-                <input type="number" min={1} value={repeatValue}
-                  onChange={(e) => setRepeatValue(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="w-16 px-3 py-2.5 rounded-2xl border border-slate-200 bg-slate-50 text-sm font-bold text-center focus:outline-none focus:border-pink-400" />
-                <div className="flex-1 grid grid-cols-5 gap-1">
-                  {UNITS.map((u) => (
-                    <button key={u.label} onClick={() => setUnit(u)}
-                      className={`py-2 rounded-xl text-[11px] font-semibold transition-all ${unit.label === u.label ? 'bg-pink-500 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
-                      {u.label}
-                    </button>
-                  ))}
+            {mode === 'recurring' && (
+              <>
+                <div className="mb-4">
+                  <label className="text-xs font-semibold text-slate-500 mb-1 block">REPEAT EVERY</label>
+                  <div className="flex gap-2">
+                    <input type="number" min={1} value={repeatValue}
+                      onChange={(e) => setRepeatValue(Math.max(1, parseInt(e.target.value) || 1))}
+                      className="w-16 px-3 py-2.5 rounded-2xl border border-slate-200 bg-slate-50 text-sm font-bold text-center focus:outline-none focus:border-pink-400" />
+                    <div className="flex-1 grid grid-cols-5 gap-1">
+                      {UNITS.map((u) => (
+                        <button key={u.label} onClick={() => setUnit(u)}
+                          className={`py-2 rounded-xl text-[11px] font-semibold transition-all ${unit.label === u.label ? 'bg-pink-500 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                          {u.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
+
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs font-semibold text-slate-500">STOP AFTER A DATE?</label>
+                    <button onClick={() => setHasEndDate(!hasEndDate)}
+                      className={`relative w-11 h-6 rounded-full transition-colors ${hasEndDate ? 'bg-pink-500' : 'bg-slate-300'}`}>
+                      <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${hasEndDate ? 'translate-x-6' : 'translate-x-1'}`} />
+                    </button>
+                  </div>
+                  {hasEndDate && (
+                    <div className="flex gap-2">
+                      <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)}
+                        className="flex-1 px-3 py-2.5 rounded-2xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:border-pink-400" />
+                      <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)}
+                        className="flex-1 px-3 py-2.5 rounded-2xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:border-pink-400" />
+                    </div>
+                  )}
+                  {!hasEndDate && <p className="text-xs text-slate-400">Repeats indefinitely until you cancel it.</p>}
+                </div>
+              </>
+            )}
 
             <div className="flex gap-3">
               <button onClick={onCancel} className="flex-1 py-3 rounded-2xl bg-slate-100 text-slate-600 font-semibold text-sm hover:bg-slate-200">Cancel</button>
               <button
-                onClick={() => isValid && onConfirm({ label, to: to || null, amount: amount || null, startAt, intervalMs })}
+                onClick={() => isValid && onConfirm({ label, to: to || null, amount: amount || null, startAt, intervalMs, repeatUntil })}
                 disabled={!isValid}
                 className="flex-1 py-3 rounded-2xl font-bold text-sm text-white flex items-center justify-center gap-2 disabled:opacity-50"
                 style={{ background: 'linear-gradient(135deg, #ec4899, #f43f5e)' }}

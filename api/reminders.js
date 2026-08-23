@@ -10,9 +10,9 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'POST') {
-      const { owner, label, to, amount, startAt, intervalMs } = req.body;
-      if (!owner || !label || !startAt || !intervalMs) {
-        res.status(400).json({ error: 'Missing owner, label, startAt, or intervalMs' });
+      const { owner, label, to, amount, startAt, intervalMs, repeatUntil } = req.body;
+      if (!owner || !label || !startAt) {
+        res.status(400).json({ error: 'Missing owner, label, or startAt' });
         return;
       }
 
@@ -23,9 +23,11 @@ export default async function handler(req, res) {
         label,
         to: to || null,
         amount: amount || null,
-        intervalMs,
+        intervalMs: intervalMs || null,
+        repeatUntil: repeatUntil || null,
         nextDue: startAt,
         active: true,
+        paid: false,
         createdAt: Date.now(),
       };
 
@@ -83,7 +85,7 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'PATCH') {
-      const { id, owner } = req.body;
+      const { id, owner, action } = req.body;
       if (!id || !owner) { res.status(400).json({ error: 'Missing id or owner' }); return; }
 
       const getRes = await fetch(`${UPSTASH_URL}/get/reminder:${id}`, {
@@ -93,7 +95,23 @@ export default async function handler(req, res) {
       if (!getData.result) { res.status(404).json({ error: 'Reminder not found' }); return; }
 
       const record = JSON.parse(getData.result);
-      record.nextDue = record.nextDue + record.intervalMs;
+
+      if (action === 'complete') {
+        record.paid = true;
+        record.active = false;
+      } else {
+        // one-time reminder (no interval) — deactivate after it fires
+        if (!record.intervalMs) {
+          record.active = false;
+        } else {
+          const next = record.nextDue + record.intervalMs;
+          if (record.repeatUntil && next > record.repeatUntil) {
+            record.active = false;
+          } else {
+            record.nextDue = next;
+          }
+        }
+      }
 
       await fetch(`${UPSTASH_URL}/set/reminder:${id}`, {
         method: 'POST',
