@@ -102,6 +102,15 @@ export default function Home() {
     setDueReminders((prev) => prev.filter((d) => d.id !== r.id));
   };
 
+  const payReminderNow = async (r: ReminderRecord) => {
+    await dismissReminder(r);
+    if (r.to && r.amount) {
+      handleSend(`Send ${r.amount} zkLTC to ${r.to}`);
+    } else {
+      addAgentMessage(`🔔 **${r.label}** — fill in the address/amount to send.`);
+    }
+  };
+
   const handleSend = useCallback(
     async (userMessage: string) => {
       if (!wallet.isConnected) return;
@@ -352,7 +361,7 @@ const handleReminderConfirm = async (data: { label: string; to: string | null; a
   setShowReminder(false);
   if (!wallet.account) return;
   const ok = await createReminder(wallet.account, data.label, data.to, data.amount, data.startAt, data.intervalMs);
-  addAgentMessage(ok ? `✅ Reminder set: **${data.label}**, starting ${new Date(data.startAt).toLocaleString()}.` : `❌ Failed to set reminder.`);
+  addAgentMessage(ok ? `✅ Reminder set: **${data.label}**, starting ${new Date(data.startAt).toLocaleString()}.\n\n<a href="/automations" style="color:#ec4899;font-weight:600;">→ Check your reminders here</a>` : `❌ Failed to set reminder.`);
 };
 
 const handleSplitConfirm = async (data: { description: string; recipients: { address: string; amount: string }[]; deadline: string | null }) => {
@@ -378,14 +387,7 @@ const handleSplitConfirm = async (data: { description: string; recipients: { add
           <button onClick={() => setBannerDismissed(true)} className="absolute right-4 text-red-400 hover:text-red-600">✕</button>
         </div>
       )}
-      {dueReminders.map((r) => (
-        <div key={r.id} className="relative flex items-center justify-center px-4 py-2.5 bg-pink-50 border-b border-pink-200 flex-shrink-0">
-          <p className="text-xs font-semibold text-pink-600 text-center">
-            🔔 Reminder: {r.label}{r.amount ? ` — ${r.amount} zkLTC` : ''}{r.to ? ` to ${r.to.slice(0, 8)}...` : ''}
-          </p>
-          <button onClick={() => dismissReminder(r)} className="absolute right-4 text-pink-400 hover:text-pink-600">✕</button>
-        </div>
-      ))}
+
       {/* Background ambient */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: -1 }}>
         <motion.div
@@ -537,6 +539,31 @@ const handleSplitConfirm = async (data: { description: string; recipients: { add
 
         <div ref={bottomRef} />
       </div>
+
+      {/* Due reminders floating card */}
+      {dueReminders.length > 0 && (
+        <div className="fixed bottom-28 right-4 md:right-8 z-40 space-y-2 max-w-xs">
+          {dueReminders.map((r) => (
+            <motion.div key={r.id} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
+              className="p-4 rounded-2xl bg-white shadow-xl border border-pink-200">
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <p className="text-sm font-bold text-slate-800">🔔 {r.label}</p>
+                <button onClick={() => dismissReminder(r)} className="text-slate-300 hover:text-red-500 text-xs flex-shrink-0">✕</button>
+              </div>
+              {(r.amount || r.to) && (
+                <p className="text-xs text-slate-500 mb-3">
+                  {r.amount ? `${r.amount} zkLTC` : ''}{r.amount && r.to ? ' → ' : ''}{r.to ? `${r.to.slice(0,8)}...${r.to.slice(-4)}` : ''}
+                </p>
+              )}
+              <button onClick={() => payReminderNow(r)}
+                className="w-full py-2 rounded-xl text-xs font-bold text-white"
+                style={{ background: 'linear-gradient(135deg, #ec4899, #f43f5e)' }}>
+                Pay Now
+              </button>
+            </motion.div>
+          ))}
+        </div>
+      )}
 
       {/* Input area */}
 <div

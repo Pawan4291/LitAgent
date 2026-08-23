@@ -6,6 +6,8 @@ import { loadJobs, getDueJobs, markJobRan, ScheduledJob } from '../services/sche
 import { sendZkLTC, getOnChainJobs, cancelOnChainJob, withdrawFromContract } from '../services/ethers';
 import { useWallet } from '../hooks/useWallet';
 import { LITVM_CHAIN } from '../config/litvm';
+import { BellRing } from 'lucide-react';
+import { getReminders, deleteReminder, ReminderRecord } from '../services/reminders';
 
 export default function Automations() {
   const [contractBalance, setContractBalance] = useState('0');
@@ -17,6 +19,20 @@ export default function Automations() {
   const [cancelling, setCancelling] = useState<number | null>(null);
   const [recentRuns, setRecentRuns] = useState<{ id: string; hash: string; success: boolean; ts: number }[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [reminders, setReminders] = useState<ReminderRecord[]>([]);
+
+  const refreshReminders = useCallback(() => {
+    if (wallet.account) getReminders(wallet.account).then((r) => setReminders(r.filter(x => x.active)));
+  }, [wallet.account]);
+
+  useEffect(() => { refreshReminders(); }, [refreshReminders]);
+
+  const handleDeleteReminder = async (id: string) => {
+    if (!wallet.account) return;
+    if (!window.confirm('Cancel this reminder permanently?')) return;
+    await deleteReminder(wallet.account, id);
+    refreshReminders();
+  };
 
   const refresh = useCallback(() => setJobs(loadJobs()), []);
 
@@ -255,6 +271,35 @@ const formatInterval = (s: any) => {
         <div className="flex gap-3 p-4 rounded-2xl bg-blue-50/80 border border-blue-200">
           <Info className="w-5 h-5 text-blue-500 flex-shrink-0" />
           <p className="text-xs text-blue-600">On-chain jobs execute automatically. Cancel anytime — remaining funds stay in contract until withdrawn.</p>
+        </div>
+
+        <div className="bg-white/80 rounded-3xl border border-slate-100 shadow-xl p-5">
+          <h2 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
+            <BellRing className="w-4 h-4 text-pink-500" /> Payment Reminders
+          </h2>
+          {reminders.length === 0 ? (
+            <p className="text-sm text-slate-400 text-center py-6">No active reminders. Ask LitAgent to remind you about something.</p>
+          ) : (
+            <div className="space-y-3">
+              {reminders.map((r) => (
+                <div key={r.id} className="p-4 rounded-2xl border bg-pink-50 border-pink-200 flex items-start justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold text-slate-700">{r.label}</p>
+                    {(r.amount || r.to) && (
+                      <p className="text-xs text-slate-500">
+                        {r.amount ? `${r.amount} zkLTC` : ''}{r.amount && r.to ? ' → ' : ''}{r.to ? `${r.to.slice(0,8)}...${r.to.slice(-4)}` : ''}
+                      </p>
+                    )}
+                    <p className="text-xs text-pink-600 font-medium">Next: {new Date(r.nextDue).toLocaleString()}</p>
+                  </div>
+                  <button onClick={() => handleDeleteReminder(r.id)}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-red-100 text-red-600 text-xs font-semibold hover:bg-red-200">
+                    <X className="w-3 h-3" /> Cancel
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
       </div>
