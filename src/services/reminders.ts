@@ -4,7 +4,7 @@ export interface ReminderRecord {
   label: string;
   to: string | null;
   amount: string | null;
-  repeat: 'daily' | 'weekly' | 'monthly';
+  intervalMs: number;
   nextDue: number;
   active: boolean;
   createdAt: number;
@@ -15,13 +15,14 @@ export async function createReminder(
   label: string,
   to: string | null,
   amount: string | null,
-  repeat: 'daily' | 'weekly' | 'monthly'
+  startAt: number,
+  intervalMs: number
 ): Promise<boolean> {
   try {
     const res = await fetch('/api/reminders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ owner, label, to, amount, repeat }),
+      body: JSON.stringify({ owner, label, to, amount, startAt, intervalMs }),
     });
     const data = await res.json();
     return !!data.success;

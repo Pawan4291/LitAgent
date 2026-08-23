@@ -1,5 +1,3 @@
-const INTERVAL_MS = { daily: 86400000, weekly: 604800000, monthly: 2592000000 };
-
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
@@ -12,9 +10,9 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'POST') {
-      const { owner, label, to, amount, repeat } = req.body;
-      if (!owner || !label || !repeat) {
-        res.status(400).json({ error: 'Missing owner, label, or repeat' });
+      const { owner, label, to, amount, startAt, intervalMs } = req.body;
+      if (!owner || !label || !startAt || !intervalMs) {
+        res.status(400).json({ error: 'Missing owner, label, startAt, or intervalMs' });
         return;
       }
 
@@ -25,8 +23,8 @@ export default async function handler(req, res) {
         label,
         to: to || null,
         amount: amount || null,
-        repeat,
-        nextDue: Date.now() + (INTERVAL_MS[repeat] || INTERVAL_MS.weekly),
+        intervalMs,
+        nextDue: startAt,
         active: true,
         createdAt: Date.now(),
       };
@@ -95,7 +93,7 @@ export default async function handler(req, res) {
       if (!getData.result) { res.status(404).json({ error: 'Reminder not found' }); return; }
 
       const record = JSON.parse(getData.result);
-      record.nextDue = Date.now() + (INTERVAL_MS[record.repeat] || INTERVAL_MS.weekly);
+      record.nextDue = record.nextDue + record.intervalMs;
 
       await fetch(`${UPSTASH_URL}/set/reminder:${id}`, {
         method: 'POST',

@@ -348,11 +348,11 @@ const handleBulkConfirm = async (data: { description: string; recipients: { addr
   }
 };
 
-const handleReminderConfirm = async (data: { label: string; to: string | null; amount: string | null; repeat: 'daily' | 'weekly' | 'monthly' }) => {
+const handleReminderConfirm = async (data: { label: string; to: string | null; amount: string | null; startAt: number; intervalMs: number }) => {
   setShowReminder(false);
   if (!wallet.account) return;
-  const ok = await createReminder(wallet.account, data.label, data.to, data.amount, data.repeat);
-  addAgentMessage(ok ? `✅ Reminder set: **${data.label}** (${data.repeat}).` : `❌ Failed to set reminder.`);
+  const ok = await createReminder(wallet.account, data.label, data.to, data.amount, data.startAt, data.intervalMs);
+  addAgentMessage(ok ? `✅ Reminder set: **${data.label}**, starting ${new Date(data.startAt).toLocaleString()}.` : `❌ Failed to set reminder.`);
 };
 
 const handleSplitConfirm = async (data: { description: string; recipients: { address: string; amount: string }[]; deadline: string | null }) => {
