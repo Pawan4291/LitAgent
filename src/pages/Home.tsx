@@ -122,6 +122,10 @@ export default function Home() {
             addAgentMessage(`⚠️ **Daily limit exceeded!** You're trying to send **${action.amount} zkLTC** but your limit is **${dailyLimit} zkLTC**. Update this in Settings.`);
             return;
           }
+          if (parseFloat(action.amount) > parseFloat(wallet.balance)) {
+            addAgentMessage(`❌ **Insufficient balance.** You're trying to send **${action.amount} zkLTC** but your wallet only has **${parseFloat(wallet.balance).toFixed(6)} zkLTC**. Get more from the faucet or send a smaller amount.`);
+            return;
+          }
           const gas = await estimateGas(action.to, action.amount);
           setEstimatedGas(gas);
           setPendingAction(action);
@@ -288,6 +292,11 @@ addAgentMessage(
 
 const handleBulkConfirm = async (data: { description: string; recipients: { address: string; amount: string }[] }) => {
   setShowBulk(false);
+  const total = data.recipients.reduce((sum, r) => sum + parseFloat(r.amount || '0'), 0);
+  if (total > parseFloat(wallet.balance)) {
+    addAgentMessage(`❌ **Insufficient balance.** This bulk payout needs **${total.toFixed(6)} zkLTC** but your wallet only has **${parseFloat(wallet.balance).toFixed(6)} zkLTC**.`);
+    return;
+  }
   addAgentMessage(`⏳ Sending bulk payout to ${data.recipients.length} recipients...`);
   const result = await bulkSend(
     data.recipients.map(r => r.address),
