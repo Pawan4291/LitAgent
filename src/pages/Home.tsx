@@ -21,6 +21,8 @@ import { addJob, parseScheduleToMs, isRecurring } from '../services/scheduler';
 import { STORAGE_KEYS } from '../config/constants';
 import { AgentAction } from '../services/claude';
 import { getTemplates, TemplateRecord } from '../services/templates';
+import ReminderModal from '../components/ReminderModal';
+import { createReminder, getReminders, snoozeReminder, ReminderRecord } from '../services/reminders';
 
 const WELCOME_MESSAGES = [
   "What's my zkLTC balance?",
@@ -38,6 +40,9 @@ export default function Home() {
   const [splitAction, setSplitAction] = useState<AgentAction | null>(null);
   const [showBulk, setShowBulk] = useState(false);
   const [bulkAction, setBulkAction] = useState<AgentAction | null>(null);
+  const [showReminder, setShowReminder] = useState(false);
+  const [reminderAction, setReminderAction] = useState<AgentAction | null>(null);
+  const [dueReminders, setDueReminders] = useState<ReminderRecord[]>([]);
  const wallet = useWalletContext();
   const { messages, isThinking, processMessage, addAgentMessage, clearHistory } = useAgent();
   const { transactions, fetchTransactions } = useTransactions();
@@ -83,6 +88,20 @@ export default function Home() {
     if (!isLowBalance) setBannerDismissed(false);
   }, [isLowBalance]);
 
+  useEffect(() => {
+    if (!wallet.account) return;
+    getReminders(wallet.account).then((records) => {
+      const due = records.filter((r) => r.active && r.nextDue <= Date.now());
+      setDueReminders(due);
+    });
+  }, [wallet.account]);
+
+  const dismissReminder = async (r: ReminderRecord) => {
+    if (!wallet.account) return;
+    await snoozeReminder(wallet.account, r.id);
+    setDueReminders((prev) => prev.filter((d) => d.id !== r.id));
+  };
+
   const handleSend = useCallback(
     async (userMessage: string) => {
       if (!wallet.isConnected) return;
@@ -103,6 +122,11 @@ export default function Home() {
       const isBulkIntent = /bulk|payroll|pay everyone|send to multiple|send to each/i.test(userMessage);
       if (isBulkIntent) {
         action.action = 'bulk';
+      }
+
+      const isReminderIntent = /remind me|reminder|nag me|don't let me forget/i.test(userMessage);
+      if (isReminderIntent) {
+        action.action = 'reminder';
       }
 
       const settings = JSON.parse(localStorage.getItem(STORAGE_KEYS.SETTINGS) || '{}');
@@ -188,6 +212,13 @@ if (settings.requireConfirm !== false && !isTrusted) {
   setBulkAction(action);
   setShowBulk(true);
   addAgentMessage(`📤 Opening bulk payout builder! Add recipients and amounts in the form.`, action);
+  break;
+}
+
+        case 'reminder': {
+  setReminderAction(action);
+  setShowReminder(true);
+  addAgentMessage(`🔔 Opening reminder builder! Fill in what to remind you about.`, action);
   break;
 }
 
@@ -317,6 +348,13 @@ const handleBulkConfirm = async (data: { description: string; recipients: { addr
   }
 };
 
+const handleReminderConfirm = async (data: { label: string; to: string | null; amount: string | null; repeat: 'daily' | 'weekly' | 'monthly' }) => {
+  setShowReminder(false);
+  if (!wallet.account) return;
+  const ok = await createReminder(wallet.account, data.label, data.to, data.amount, data.repeat);
+  addAgentMessage(ok ? `✅ Reminder set: **${data.label}** (${data.repeat}).` : `❌ Failed to set reminder.`);
+};
+
 const handleSplitConfirm = async (data: { description: string; recipients: { address: string; amount: string }[]; deadline: string | null }) => {
   setShowSplit(false);
   if (!wallet.account) return;
@@ -340,6 +378,14 @@ const handleSplitConfirm = async (data: { description: string; recipients: { add
           <button onClick={() => setBannerDismissed(true)} className="absolute right-4 text-red-400 hover:text-red-600">✕</button>
         </div>
       )}
+      {dueReminders.map((r) => (
+        <div key={r.id} className="relative flex items-center justify-center px-4 py-2.5 bg-pink-50 border-b border-pink-200 flex-shrink-0">
+          <p className="text-xs font-semibold text-pink-600 text-center">
+            🔔 Reminder: {r.label}{r.amount ? ` — ${r.amount} zkLTC` : ''}{r.to ? ` to ${r.to.slice(0, 8)}...` : ''}
+          </p>
+          <button onClick={() => dismissReminder(r)} className="absolute right-4 text-pink-400 hover:text-pink-600">✕</button>
+        </div>
+      ))}
       {/* Background ambient */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: -1 }}>
         <motion.div
@@ -556,6 +602,17 @@ const handleSplitConfirm = async (data: { description: string; recipients: { add
           setShowBulk(false);
           setBulkAction(null);
           addAgentMessage('❌ Bulk payout cancelled by user.');
+        }}
+      />
+      <ReminderModal
+        isOpen={showReminder}
+        initialTo={reminderAction?.to || ''}
+        initialAmount={reminderAction?.amount || ''}
+        onConfirm={handleReminderConfirm}
+        onCancel={() => {
+          setShowReminder(false);
+          setReminderAction(null);
+          addAgentMessage('❌ Reminder cancelled by user.');
         }}
       />
     </div>

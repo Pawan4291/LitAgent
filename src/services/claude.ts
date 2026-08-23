@@ -6,7 +6,7 @@ export interface SplitRecipient {
 }
 
 export interface AgentAction {
-  action: 'send' | 'balance' | 'history' | 'schedule' | 'stats' | 'help' | 'split' | 'bulk' | 'unknown';
+  action: 'send' | 'balance' | 'history' | 'schedule' | 'stats' | 'help' | 'split' | 'bulk' | 'reminder' | 'unknown';
   to: string | null;
   amount: string | null;
   schedule: string | null;
@@ -24,6 +24,7 @@ ACTION RULES (pick the best match):
 - "send", "transfer", "pay", "give", "wire" → "send"
 - "split", "split bill", "request payment", "request from", "collect from", "divide between" → "split"
 - "bulk", "bulk payout", "bulk payment", "send to multiple", "pay everyone", "send to each", "payroll" → "bulk"
+- "remind me", "reminder", "nag me", "don't let me forget" → "reminder"
 - "every", "daily", "weekly", "monthly", "recurring", "repeat", "schedule", "automate", "set up payment" → "schedule"
 - "balance", "how much", "wallet", "funds", "money", "rich", "broke", "account" → "balance"
 - "history", "transactions", "past", "previous", "sent", "received", "activity", "log" → "history"
@@ -37,7 +38,7 @@ SPLIT RULE: If action is "split", extract any real 0x wallet addresses mentioned
 
 Response format:
 {
-  "action": "send"|"balance"|"history"|"schedule"|"stats"|"help"|"split"|"bulk"|"unknown",
+  "action": "send"|"balance"|"history"|"schedule"|"stats"|"help"|"split"|"bulk"|"reminder"|"unknown",
   "to": "0x address or null",
   "amount": "total number only or null",
   "schedule": "human description or null",
