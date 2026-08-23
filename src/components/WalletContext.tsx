@@ -5,6 +5,8 @@ interface WalletContextType extends WalletState {
   connect: () => Promise<void>;
   disconnect: () => void;
   refreshBalance: () => Promise<void>;
+  lowBalanceAlert: string | null;
+  clearLowBalanceAlert: () => void;
 }
 
 const WalletContext = createContext<WalletContextType | null>(null);

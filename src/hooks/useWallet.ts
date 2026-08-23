@@ -26,12 +26,25 @@ export function useWallet() {
 
   const lastBalanceFetch = useRef<number>(0);
 
+const lastAlertedBelow = useRef<boolean>(false);
+const [lowBalanceAlert, setLowBalanceAlert] = useState<string | null>(null);
+
 const updateBalance = useCallback(async (address: string) => {
   const now = Date.now();
   if (now - lastBalanceFetch.current < 30000) return; // 30 sec throttle
   lastBalanceFetch.current = now;
   const bal = await getBalance(address);
   setState((prev) => ({ ...prev, balance: bal }));
+
+  try {
+    const raw = localStorage.getItem('litagent_settings');
+    const threshold = raw ? JSON.parse(raw).lowBalanceThreshold || 0 : 0;
+    const isBelow = threshold > 0 && parseFloat(bal) < threshold;
+    if (isBelow && !lastAlertedBelow.current) {
+      setLowBalanceAlert(`⚠️ Your balance dropped below ${threshold} zkLTC (currently ${parseFloat(bal).toFixed(6)} zkLTC).`);
+    }
+    lastAlertedBelow.current = isBelow;
+  } catch {}
 }, []);
 
   const connect = useCallback(async () => {
@@ -146,5 +159,5 @@ await registerWallet(account); // ← add here
     };
   }, [disconnect, updateBalance]);
 
-  return { ...state, connect, disconnect, refreshBalance };
+  return { ...state, connect, disconnect, refreshBalance, lowBalanceAlert, clearLowBalanceAlert: () => setLowBalanceAlert(null) };
 }

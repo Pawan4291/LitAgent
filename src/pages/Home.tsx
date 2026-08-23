@@ -76,6 +76,13 @@ export default function Home() {
     }
   }, [wallet.account, fetchTransactions]);
 
+  useEffect(() => {
+    if (wallet.lowBalanceAlert) {
+      addAgentMessage(wallet.lowBalanceAlert);
+      wallet.clearLowBalanceAlert();
+    }
+  }, [wallet.lowBalanceAlert]);
+
   const handleSend = useCallback(
     async (userMessage: string) => {
       if (!wallet.isConnected) return;

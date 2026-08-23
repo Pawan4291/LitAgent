@@ -7,7 +7,7 @@ import { isValidAddress } from '../services/ethers';
 interface Settings {
   dailyLimit: number;
   whitelist: string[];
- 
+  lowBalanceThreshold: number;
   requireConfirm: boolean;
 }
 
@@ -15,7 +15,7 @@ export default function SafetySettings() {
   const [settings, setSettings] = useState<Settings>({
     dailyLimit: DEFAULT_DAILY_LIMIT,
     whitelist: [],
-   
+    lowBalanceThreshold: 0,
     requireConfirm: true,
   });
   const [newAddress, setNewAddress] = useState('');
@@ -128,6 +128,38 @@ export default function SafetySettings() {
               </button>
             ))}
           </div>
+        </div>
+      </motion.div>
+
+      {/* Low Balance Alert */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.12 }}
+        className="p-5 rounded-2xl bg-white/80 border border-slate-200 shadow-sm"
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-400 to-red-500 flex items-center justify-center shadow-md">
+            <AlertTriangle className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-slate-800">Low Balance Alert</h3>
+            <p className="text-xs text-slate-500">Notify me when balance drops below this</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <input
+            type="number"
+            min={0}
+            step={0.0001}
+            value={settings.lowBalanceThreshold}
+            onChange={(e) =>
+              setSettings((prev) => ({ ...prev, lowBalanceThreshold: Math.max(0, parseFloat(e.target.value) || 0) }))
+            }
+            placeholder="0 = disabled"
+            className="w-28 px-3 py-2 rounded-xl border-2 border-slate-200 bg-white text-sm font-bold text-rose-600 text-center focus:outline-none focus:border-rose-400"
+          />
+          <span className="text-xs font-semibold text-purple-600">zkLTC</span>
         </div>
       </motion.div>
 
