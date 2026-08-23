@@ -333,11 +333,11 @@ const handleSplitConfirm = async (data: { description: string; recipients: { add
   return (
     <div className="flex flex-col h-[calc(100vh-64px)] md:h-[calc(100vh-72px)]">
       {isLowBalance && !bannerDismissed && (
-        <div className="flex items-center justify-between gap-3 px-4 py-2.5 bg-red-50 border-b border-red-200 flex-shrink-0">
-          <p className="text-xs font-semibold text-red-600">
+        <div className="relative flex items-center justify-center px-4 py-2.5 bg-red-50 border-b border-red-200 flex-shrink-0">
+          <p className="text-xs font-semibold text-red-600 text-center">
             ⚠️ Balance below {wallet.lowBalanceThreshold} zkLTC — currently {parseFloat(wallet.balance).toFixed(6)} zkLTC.
           </p>
-          <button onClick={() => setBannerDismissed(true)} className="text-red-400 hover:text-red-600 flex-shrink-0">✕</button>
+          <button onClick={() => setBannerDismissed(true)} className="absolute right-4 text-red-400 hover:text-red-600">✕</button>
         </div>
       )}
       {/* Background ambient */}
