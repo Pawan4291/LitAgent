@@ -23,6 +23,8 @@ import { AgentAction } from '../services/claude';
 import { getTemplates, TemplateRecord } from '../services/templates';
 import ReminderModal from '../components/ReminderModal';
 import { createReminder, getReminders, snoozeReminder, ReminderRecord } from '../services/reminders';
+import EscrowModal from '../components/EscrowModal';
+import { createEscrow } from '../services/ethers';
 
 const WELCOME_MESSAGES = [
   "What's my zkLTC balance?",
@@ -43,6 +45,8 @@ export default function Home() {
   const [showReminder, setShowReminder] = useState(false);
   const [reminderAction, setReminderAction] = useState<AgentAction | null>(null);
   const [dueReminders, setDueReminders] = useState<ReminderRecord[]>([]);
+  const [showEscrow, setShowEscrow] = useState(false);
+  const [escrowAction, setEscrowAction] = useState<AgentAction | null>(null);
  const wallet = useWalletContext();
   const { messages, isThinking, processMessage, addAgentMessage, clearHistory } = useAgent();
   const { transactions, fetchTransactions } = useTransactions();
@@ -138,6 +142,11 @@ export default function Home() {
         action.action = 'reminder';
       }
 
+      const isEscrowIntent = /escrow|hold funds|secure payment|release when|pay only if|lock until confirmed/i.test(userMessage);
+      if (isEscrowIntent) {
+        action.action = 'escrow';
+      }
+
       const settings = JSON.parse(localStorage.getItem(STORAGE_KEYS.SETTINGS) || '{}');
 
       switch (action.action) {
@@ -228,6 +237,13 @@ if (settings.requireConfirm !== false && !isTrusted) {
   setReminderAction(action);
   setShowReminder(true);
   addAgentMessage(`🔔 Opening reminder builder! Fill in what to remind you about.`, action);
+  break;
+}
+
+        case 'escrow': {
+  setEscrowAction(action);
+  setShowEscrow(true);
+  addAgentMessage(`🛡️ Opening escrow builder! Funds stay locked until you confirm receipt.`, action);
   break;
 }
 
@@ -354,6 +370,27 @@ const handleBulkConfirm = async (data: { description: string; recipients: { addr
     wallet.refreshBalance();
   } else {
     addAgentMessage(`❌ Bulk payout failed: ${result.error}`);
+  }
+};
+
+const handleEscrowConfirm = async (data: { seller: string; amount: string; deadlineSeconds: number; label: string }) => {
+  setShowEscrow(false);
+  if (parseFloat(data.amount) > parseFloat(wallet.balance)) {
+    addAgentMessage(`❌ **Insufficient balance.** This escrow needs **${data.amount} zkLTC** but your wallet only has **${parseFloat(wallet.balance).toFixed(6)} zkLTC**.`);
+    return;
+  }
+  addAgentMessage(`⏳ Locking ${data.amount} zkLTC in escrow...`);
+  const result = await createEscrow(data.seller, data.amount, data.deadlineSeconds, data.label);
+  if (result.success) {
+    addAgentMessage(
+      `✅ Funds locked! **${data.label}** — ${data.amount} zkLTC held until you confirm receipt or the deadline passes.\n\nTx: \`${result.hash}\``,
+      { ...escrowAction!, action: 'escrow' } as AgentAction,
+      result.hash,
+      'confirmed'
+    );
+    wallet.refreshBalance();
+  } else {
+    addAgentMessage(`❌ Escrow failed: ${result.error}`);
   }
 };
 
@@ -640,6 +677,18 @@ const handleSplitConfirm = async (data: { description: string; recipients: { add
           setShowReminder(false);
           setReminderAction(null);
           addAgentMessage('❌ Reminder cancelled by user.');
+        }}
+      />
+      <EscrowModal
+        isOpen={showEscrow}
+        initialTo={escrowAction?.to || ''}
+        initialAmount={escrowAction?.amount || ''}
+        availableBalance={wallet.balance}
+        onConfirm={handleEscrowConfirm}
+        onCancel={() => {
+          setShowEscrow(false);
+          setEscrowAction(null);
+          addAgentMessage('❌ Escrow cancelled by user.');
         }}
       />
     </div>

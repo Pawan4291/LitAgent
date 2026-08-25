@@ -8,6 +8,8 @@ import { useWallet } from '../hooks/useWallet';
 import { LITVM_CHAIN } from '../config/litvm';
 import { BellRing, Zap as ZapIcon } from 'lucide-react';
 import { getReminders, deleteReminder, markReminderPaid, ReminderRecord } from '../services/reminders';
+import { ShieldCheck } from 'lucide-react';
+import { getBuyerEscrows, releaseEscrow, refundEscrow } from '../services/ethers';
 
 export default function Automations() {
   const [contractBalance, setContractBalance] = useState('0');
@@ -22,7 +24,33 @@ export default function Automations() {
   const [reminders, setReminders] = useState<ReminderRecord[]>([]);
   const [payingId, setPayingId] = useState<string | null>(null);
   const [justPaidId, setJustPaidId] = useState<string | null>(null);
-  const [tab, setTab] = useState<'schedule' | 'reminders'>('schedule');
+  const [tab, setTab] = useState<'schedule' | 'reminders' | 'escrow'>('schedule');
+  const [escrows, setEscrows] = useState<any[]>([]);
+  const [escrowActionId, setEscrowActionId] = useState<number | null>(null);
+
+  const refreshEscrows = useCallback(() => {
+    if (wallet.account) getBuyerEscrows(wallet.account).then(setEscrows);
+  }, [wallet.account]);
+
+  useEffect(() => { refreshEscrows(); }, [refreshEscrows]);
+
+  const handleRelease = async (id: number) => {
+    if (!window.confirm('Confirm you received what you paid for? This releases funds to the seller.')) return;
+    setEscrowActionId(id);
+    try {
+      const result = await releaseEscrow(id);
+      if (result.success) { await new Promise(r => setTimeout(r, 2000)); refreshEscrows(); }
+    } finally { setEscrowActionId(null); }
+  };
+
+  const handleRefund = async (id: number) => {
+    if (!window.confirm('Reclaim these funds back to your wallet?')) return;
+    setEscrowActionId(id);
+    try {
+      const result = await refundEscrow(id);
+      if (result.success) { await new Promise(r => setTimeout(r, 2000)); refreshEscrows(); wallet.refreshBalance(); }
+    } finally { setEscrowActionId(null); }
+  };
 
   const refreshReminders = useCallback(() => {
     if (wallet.account) getReminders(wallet.account).then((r) => setReminders(r.filter(x => x.active)));
@@ -194,10 +222,10 @@ const formatInterval = (s: any) => {
         </div>
 
         <div className="flex gap-1 p-1 bg-slate-100/80 rounded-2xl">
-          {(['schedule', 'reminders'] as const).map(t => (
+          {(['schedule', 'reminders', 'escrow'] as const).map(t => (
             <button key={t} onClick={() => setTab(t)}
               className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 ${tab === t ? 'bg-white text-slate-800 shadow-md' : 'text-slate-500'}`}>
-              {t === 'schedule' ? <><ZapIcon className="w-4 h-4" />Schedule</> : <><BellRing className="w-4 h-4" />Reminders</>}
+              {t === 'schedule' ? <><ZapIcon className="w-4 h-4" />Schedule</> : t === 'reminders' ? <><BellRing className="w-4 h-4" />Reminders</> : <><ShieldCheck className="w-4 h-4" />Escrow</>}
             </button>
           ))}
         </div>
@@ -339,6 +367,57 @@ const formatInterval = (s: any) => {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+        </div>}
+
+        {tab === 'escrow' && <div className="bg-white/80 rounded-3xl border border-slate-100 shadow-xl p-5">
+          <h2 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-amber-500" /> Escrow Payments
+          </h2>
+          {escrows.length === 0 ? (
+            <p className="text-sm text-slate-400 text-center py-6">No escrows yet. Ask LitAgent to lock funds in escrow.</p>
+          ) : (
+            <div className="space-y-3">
+              {escrows.map((e, id) => {
+                const statusLabel = ['Pending', 'Released', 'Refunded'][Number(e.status)];
+                const isPending = Number(e.status) === 0;
+                const canRefund = isPending && Number(e.deadline) * 1000 <= Date.now();
+                return (
+                  <div key={id} className={`p-4 rounded-2xl border ${isPending ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-200 opacity-70'}`}>
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${isPending ? 'bg-amber-500 text-white' : Number(e.status) === 1 ? 'bg-emerald-500 text-white' : 'bg-slate-400 text-white'}`}>
+                            {statusLabel}
+                          </span>
+                        </div>
+                        <p className="text-xs font-medium text-slate-600">{e.label}</p>
+                        <p className="text-sm font-semibold text-slate-700">
+                          {(Number(e.amount) / 1e18)} zkLTC → <span className="font-mono text-xs">{e.seller.slice(0, 8)}...{e.seller.slice(-4)}</span>
+                        </p>
+                        {isPending && (
+                          <p className="text-xs text-slate-400">
+                            {canRefund ? 'Refundable now' : `Refundable after: ${new Date(Number(e.deadline) * 1000).toLocaleString()}`}
+                          </p>
+                        )}
+                      </div>
+                      {isPending && (
+                        <div className="flex flex-col gap-2 flex-shrink-0">
+                          <button onClick={() => handleRelease(id)} disabled={escrowActionId === id}
+                            className="px-3 py-1.5 rounded-xl bg-emerald-500 text-white text-xs font-semibold hover:bg-emerald-600 disabled:opacity-50">
+                            Release Funds
+                          </button>
+                          <button onClick={() => handleRefund(id)} disabled={escrowActionId === id || !canRefund}
+                            className="px-3 py-1.5 rounded-xl bg-red-100 text-red-600 text-xs font-semibold hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                            Refund
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>}

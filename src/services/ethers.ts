@@ -324,6 +324,104 @@ export async function getBulkHistory(ownerAddress: string): Promise<any[]> {
   }
 }
 
+const ESCROW_ABI = [
+  "function createEscrow(address _seller, uint256 _deadlineSeconds, string _label) payable returns (uint256)",
+  "function release(uint256 _escrowId) external",
+  "function refund(uint256 _escrowId) external",
+  "function getBuyerEscrows(address _buyer) view returns (tuple(address buyer, address seller, uint256 amount, uint256 deadline, string label, uint8 status)[])",
+  "function getSellerEscrows(address _seller) view returns (tuple(address buyer, address seller, uint256 amount, uint256 deadline, string label, uint8 status)[])"
+];
+
+export async function createEscrow(
+  seller: string,
+  amountEth: string,
+  deadlineSeconds: number,
+  label: string
+): Promise<{ hash: string; success: boolean; error?: string }> {
+  try {
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    const from = accounts[0];
+
+    const iface = new ethers.Interface([
+      "function createEscrow(address _seller, uint256 _deadlineSeconds, string _label) payable"
+    ]);
+    const data = iface.encodeFunctionData('createEscrow', [seller, BigInt(deadlineSeconds), label]);
+
+    const provider = getRpcProvider();
+    const feeData = await provider.getFeeData();
+    const baseFee = feeData.gasPrice || ethers.parseUnits('20', 'gwei');
+
+    const txHash = await window.ethereum.request({
+      method: 'eth_sendTransaction',
+      params: [{
+        from,
+        to: import.meta.env.VITE_ESCROW_CONTRACT,
+        data,
+        value: '0x' + ethers.parseEther(amountEth).toString(16),
+        gas: '0x' + (250000).toString(16),
+        maxFeePerGas: '0x' + (baseFee * 2n).toString(16),
+        maxPriorityFeePerGas: '0x' + baseFee.toString(16)
+      }]
+    });
+
+    return { hash: txHash, success: true };
+  } catch (error: any) {
+    return { hash: '', success: false, error: error.message };
+  }
+}
+
+export async function releaseEscrow(escrowId: number): Promise<{ hash: string; success: boolean; error?: string }> {
+  try {
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    const from = accounts[0];
+    const iface = new ethers.Interface(["function release(uint256 _escrowId) external"]);
+    const data = iface.encodeFunctionData('release', [BigInt(escrowId)]);
+    const txHash = await window.ethereum.request({
+      method: 'eth_sendTransaction',
+      params: [{ from, to: import.meta.env.VITE_ESCROW_CONTRACT, data, gas: '0x30000' }]
+    });
+    return { hash: txHash, success: true };
+  } catch (error: any) {
+    return { hash: '', success: false, error: error.message };
+  }
+}
+
+export async function refundEscrow(escrowId: number): Promise<{ hash: string; success: boolean; error?: string }> {
+  try {
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    const from = accounts[0];
+    const iface = new ethers.Interface(["function refund(uint256 _escrowId) external"]);
+    const data = iface.encodeFunctionData('refund', [BigInt(escrowId)]);
+    const txHash = await window.ethereum.request({
+      method: 'eth_sendTransaction',
+      params: [{ from, to: import.meta.env.VITE_ESCROW_CONTRACT, data, gas: '0x30000' }]
+    });
+    return { hash: txHash, success: true };
+  } catch (error: any) {
+    return { hash: '', success: false, error: error.message };
+  }
+}
+
+export async function getBuyerEscrows(address: string): Promise<any[]> {
+  try {
+    const provider = getRpcProvider();
+    const contract = new ethers.Contract(import.meta.env.VITE_ESCROW_CONTRACT, ESCROW_ABI, provider);
+    return await contract.getBuyerEscrows(address);
+  } catch {
+    return [];
+  }
+}
+
+export async function getSellerEscrows(address: string): Promise<any[]> {
+  try {
+    const provider = getRpcProvider();
+    const contract = new ethers.Contract(import.meta.env.VITE_ESCROW_CONTRACT, ESCROW_ABI, provider);
+    return await contract.getSellerEscrows(address);
+  } catch {
+    return [];
+  }
+}
+
 export async function registerWallet(address: string): Promise<void> {
   try {
     await fetch(`${import.meta.env.VITE_EXECUTOR_API}/api/register`, {

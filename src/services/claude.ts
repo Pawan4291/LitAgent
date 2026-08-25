@@ -6,7 +6,7 @@ export interface SplitRecipient {
 }
 
 export interface AgentAction {
-  action: 'send' | 'balance' | 'history' | 'schedule' | 'stats' | 'help' | 'split' | 'bulk' | 'reminder' | 'unknown';
+  action: 'send' | 'balance' | 'history' | 'schedule' | 'stats' | 'help' | 'split' | 'bulk' | 'reminder' | 'escrow' | 'unknown';
   to: string | null;
   amount: string | null;
   schedule: string | null;
@@ -25,6 +25,7 @@ ACTION RULES (pick the best match):
 - "split", "split bill", "request payment", "request from", "collect from", "divide between" → "split"
 - "bulk", "bulk payout", "bulk payment", "send to multiple", "pay everyone", "send to each", "payroll" → "bulk"
 - "remind me", "reminder", "nag me", "don't let me forget" → "reminder"
+- "escrow", "hold funds", "secure payment", "release when", "pay only if", "lock until confirmed" → "escrow"
 - "every", "daily", "weekly", "monthly", "recurring", "repeat", "schedule", "automate", "set up payment" → "schedule"
 - "balance", "how much", "wallet", "funds", "money", "rich", "broke", "account" → "balance"
 - "history", "transactions", "past", "previous", "sent", "received", "activity", "log" → "history"
@@ -38,9 +39,11 @@ SPLIT RULE: If action is "split", extract any real 0x wallet addresses mentioned
 
 REMINDER RULE: If action is "reminder", extract a real 0x address into "to" and a number into "amount" if mentioned in the message, exactly like the send rule. If no address/amount is mentioned, leave both null — the user will fill them in the form.
 
+ESCROW RULE: If action is "escrow", extract a real 0x seller address into "to" and a number into "amount" if mentioned, exactly like the send rule. If not mentioned, leave both null — the user fills them in the form.
+
 Response format:
 {
-  "action": "send"|"balance"|"history"|"schedule"|"stats"|"help"|"split"|"bulk"|"reminder"|"unknown",
+  "action": "send"|"balance"|"history"|"schedule"|"stats"|"help"|"split"|"bulk"|"reminder"|"escrow"|"unknown",
   "to": "0x address or null",
   "amount": "total number only or null",
   "schedule": "human description or null",
