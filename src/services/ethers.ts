@@ -370,15 +370,27 @@ export async function createEscrow(
   }
 }
 
+async function getFreshFees() {
+  const provider = getRpcProvider();
+  const feeData = await provider.getFeeData();
+  const baseFee = feeData.gasPrice || ethers.parseUnits('20', 'gwei');
+  return { maxFeePerGas: baseFee * 2n, maxPriorityFeePerGas: baseFee };
+}
+
 export async function releaseEscrow(escrowId: number): Promise<{ hash: string; success: boolean; error?: string }> {
   try {
     const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
     const from = accounts[0];
     const iface = new ethers.Interface(["function release(uint256 _escrowId) external"]);
     const data = iface.encodeFunctionData('release', [BigInt(escrowId)]);
+    const fees = await getFreshFees();
     const txHash = await window.ethereum.request({
       method: 'eth_sendTransaction',
-      params: [{ from, to: import.meta.env.VITE_ESCROW_CONTRACT, data, gas: '0x30000' }]
+      params: [{
+        from, to: import.meta.env.VITE_ESCROW_CONTRACT, data, gas: '0x30000',
+        maxFeePerGas: '0x' + fees.maxFeePerGas.toString(16),
+        maxPriorityFeePerGas: '0x' + fees.maxPriorityFeePerGas.toString(16)
+      }]
     });
     return { hash: txHash, success: true };
   } catch (error: any) {
@@ -392,9 +404,14 @@ export async function refundEscrow(escrowId: number): Promise<{ hash: string; su
     const from = accounts[0];
     const iface = new ethers.Interface(["function refund(uint256 _escrowId) external"]);
     const data = iface.encodeFunctionData('refund', [BigInt(escrowId)]);
+    const fees = await getFreshFees();
     const txHash = await window.ethereum.request({
       method: 'eth_sendTransaction',
-      params: [{ from, to: import.meta.env.VITE_ESCROW_CONTRACT, data, gas: '0x30000' }]
+      params: [{
+        from, to: import.meta.env.VITE_ESCROW_CONTRACT, data, gas: '0x30000',
+        maxFeePerGas: '0x' + fees.maxFeePerGas.toString(16),
+        maxPriorityFeePerGas: '0x' + fees.maxPriorityFeePerGas.toString(16)
+      }]
     });
     return { hash: txHash, success: true };
   } catch (error: any) {
