@@ -36,6 +36,8 @@ AMOUNT RULE: Extract number only. "0.1 zkLTC" → "0.1". Never include units.
 
 SPLIT RULE: If action is "split", extract any real 0x wallet addresses mentioned into "recipients" as [{ "address": "0x...", "amount": "0.05" or null }]. If the message names recipients without real addresses ("wallet A", "wallet B", a person's name), still set action to "split" but return "recipients": [] — the user will fill addresses in manually. If amounts per recipient aren't specified, leave each "amount" as null (equal split assumed).
 
+REMINDER RULE: If action is "reminder", extract a real 0x address into "to" and a number into "amount" if mentioned in the message, exactly like the send rule. If no address/amount is mentioned, leave both null — the user will fill them in the form.
+
 Response format:
 {
   "action": "send"|"balance"|"history"|"schedule"|"stats"|"help"|"split"|"bulk"|"reminder"|"unknown",

@@ -51,7 +51,7 @@ export default function ReminderModal({ isOpen, initialTo, initialAmount, onConf
   const startAt = date && time ? new Date(`${date}T${time}`).getTime() : 0;
   const intervalMs = mode === 'recurring' ? repeatValue * unit.ms : null;
   const repeatUntil = mode === 'recurring' && hasEndDate && endDate && endTime ? new Date(`${endDate}T${endTime}`).getTime() : null;
-  const isValid = label.trim().length > 0 && startAt > 0 && (mode === 'onetime' || intervalMs! > 0);
+  const isValid = label.trim().length > 0 && to.trim().length > 0 && parseFloat(amount) > 0 && startAt > 0 && (mode === 'onetime' || intervalMs! > 0);
 
   return (
     <AnimatePresence>
@@ -98,13 +98,13 @@ export default function ReminderModal({ isOpen, initialTo, initialAmount, onConf
             </div>
 
             <div className="mb-4">
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">ADDRESS (OPTIONAL)</label>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">ADDRESS</label>
               <input type="text" value={to} onChange={(e) => setTo(e.target.value)} placeholder="0x wallet address"
                 className="w-full px-3 py-2.5 rounded-2xl border border-slate-200 bg-slate-50 text-sm font-mono focus:outline-none focus:border-pink-400" />
             </div>
 
             <div className="mb-4">
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">AMOUNT (OPTIONAL)</label>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">AMOUNT</label>
               <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00"
                 className="w-full px-3 py-2.5 rounded-2xl border border-slate-200 bg-slate-50 text-sm font-bold focus:outline-none focus:border-pink-400" />
             </div>

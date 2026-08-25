@@ -324,9 +324,10 @@ const formatInterval = (s: any) => {
                   </div>
                   <div className="flex flex-col gap-2 flex-shrink-0">
                     {r.to && r.amount && justPaidId !== r.id && (
-                      <button onClick={() => handlePayReminder(r)} disabled={payingId === r.id}
-                        className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-500 text-white text-xs font-semibold hover:bg-emerald-600 disabled:opacity-50">
-                        {payingId === r.id ? 'Sending...' : 'Pay Now'}
+                      <button onClick={() => handlePayReminder(r)} disabled={payingId === r.id || r.nextDue > Date.now()}
+                        title={r.nextDue > Date.now() ? `Available at ${new Date(r.nextDue).toLocaleTimeString()}` : ''}
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-500 text-white text-xs font-semibold hover:bg-emerald-600 disabled:opacity-50 disabled:bg-slate-300 disabled:cursor-not-allowed">
+                        {payingId === r.id ? 'Sending...' : r.nextDue > Date.now() ? 'Not due yet' : 'Pay Now'}
                       </button>
                     )}
                     {justPaidId !== r.id && (
