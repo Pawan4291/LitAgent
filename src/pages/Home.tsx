@@ -32,6 +32,8 @@ const WELCOME_MESSAGES = [
   "Show my transaction history",
   "Split 0.1 zkLTC between two wallets",
   "Bulk pay 5 wallets at once",
+  "Remind me to pay rent every month",
+  "Escrow 0.1 zkLTC for freelance work",
   "Analyze my spending this month",
 ];
 
@@ -504,12 +506,14 @@ const handleSplitConfirm = async (data: { description: string; recipients: { add
               </div>
 
               {/* Features */}
-              <div className="grid grid-cols-2 gap-3 w-full max-w-sm">
+              <div className="grid grid-cols-3 gap-3 w-full max-w-md">
                 {[
                   { icon: '💸', label: 'Send zkLTC', desc: 'Real transactions' },
                   { icon: '👥', label: 'Split', desc: 'Request from many' },
                   { icon: '📤', label: 'Bulk Pay', desc: 'Pay many at once' },
                   { icon: '⏰', label: 'Automate', desc: 'Schedule transfers' },
+                  { icon: '🔔', label: 'Reminders', desc: 'Never forget' },
+                  { icon: '🛡️', label: 'Escrow', desc: 'Trustless payments' },
                 ].map((f) => (
                   <motion.div
                     key={f.label}

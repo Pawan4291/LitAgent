@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Zap, Shield, Clock, BarChart3, ArrowRight, Bot, Sparkles, Send, Brain } from 'lucide-react';
+import { Zap, Shield, Clock, BarChart3, ArrowRight, Bot, Sparkles, Send, Brain, Bell, ShieldCheck } from 'lucide-react';
 
-const ROTATING_WORDS = ['Send zkLTC', 'Schedule Payments', 'Split Bills', 'Bulk Payouts', 'Analyze Spending', 'Automate Transfers', 'Check Balance'];
+const ROTATING_WORDS = ['Send zkLTC', 'Schedule Payments', 'Split Bills', 'Bulk Payouts', 'Remind You to Pay', 'Hold Funds in Escrow', 'Analyze Spending', 'Check Balance'];
 
 const FEATURES = [
   {
@@ -45,6 +45,22 @@ const FEATURES = [
     color: '#06b6d4',
     bg: 'from-cyan-50 to-cyan-100/50',
     border: 'border-cyan-200',
+  },
+  {
+    icon: Bell,
+    title: 'Smart Reminders',
+    desc: 'One-time or recurring nudges to pay someone. You confirm the send — LitAgent just makes sure you don\'t forget.',
+    color: '#ec4899',
+    bg: 'from-pink-50 to-pink-100/50',
+    border: 'border-pink-200',
+  },
+  {
+    icon: ShieldCheck,
+    title: 'Escrow Payments',
+    desc: 'Lock funds until you confirm receipt. If it\'s never released, reclaim your money after the deadline — no trust required.',
+    color: '#f59e0b',
+    bg: 'from-amber-50 to-amber-100/50',
+    border: 'border-amber-200',
   },
   {
     icon: BarChart3,

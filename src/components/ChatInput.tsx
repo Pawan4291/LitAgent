@@ -21,6 +21,8 @@ const QUICK_COMMANDS = [
   { label: '⏰ Daily Send', command: 'Schedule daily 0.01 zkLTC send to 0x...' },
   { label: '👥 Request Payment', command: 'Split payment request' },
   { label: '📤 Bulk Payout', command: 'Bulk payment form' },
+  { label: '🔔 Set Reminder', command: 'Remind me to pay' },
+  { label: '🛡️ Escrow Payment', command: 'Escrow payment' },
   { label: '❓ Help', command: 'What can you do?' },
 ];
 
