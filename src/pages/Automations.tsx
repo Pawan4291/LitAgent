@@ -29,7 +29,7 @@ export default function Automations() {
   const [escrowActionId, setEscrowActionId] = useState<number | null>(null);
 
   const refreshEscrows = useCallback(() => {
-    if (wallet.account) getBuyerEscrows(wallet.account).then(setEscrows);
+    if (wallet.account) getBuyerEscrows(wallet.account).then((records) => setEscrows([...records].reverse()));
   }, [wallet.account]);
 
   useEffect(() => { refreshEscrows(); }, [refreshEscrows]);
@@ -379,7 +379,8 @@ const formatInterval = (s: any) => {
             <p className="text-sm text-slate-400 text-center py-6">No escrows yet. Ask LitAgent to lock funds in escrow.</p>
           ) : (
             <div className="space-y-3">
-              {escrows.map((e, id) => {
+              {escrows.map((e, displayIndex) => {
+                const id = escrows.length - 1 - displayIndex;
                 const statusLabel = ['Pending', 'Released', 'Refunded'][Number(e.status)];
                 const isPending = Number(e.status) === 0;
                 const canRefund = isPending && Number(e.deadline) * 1000 <= Date.now();
