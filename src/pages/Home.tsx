@@ -32,6 +32,8 @@ const WELCOME_MESSAGES = [
   "Show my transaction history",
   "Split 0.1 zkLTC between two wallets",
   "Bulk pay 5 wallets at once",
+  "Remind me to pay rent every month",
+  "Escrow 0.1 zkLTC for freelance work",
   "Analyze my spending this month",
 ];
 
