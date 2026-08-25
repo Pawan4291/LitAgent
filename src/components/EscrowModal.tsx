@@ -11,30 +11,27 @@ interface EscrowModalProps {
   onCancel: () => void;
 }
 
-const DEADLINE_OPTIONS = [
-  { label: '1 Day', seconds: 86400 },
-  { label: '3 Days', seconds: 259200 },
-  { label: '1 Week', seconds: 604800 },
-  { label: '2 Weeks', seconds: 1209600 },
-  { label: '1 Month', seconds: 2592000 },
-];
-
 export default function EscrowModal({ isOpen, initialTo, initialAmount, availableBalance, onConfirm, onCancel }: EscrowModalProps) {
   const [label, setLabel] = useState('');
   const [seller, setSeller] = useState('');
   const [amount, setAmount] = useState('');
-  const [deadline, setDeadline] = useState(DEADLINE_OPTIONS[2]); // default: 1 week
+  const [date, setDate] = useState('');
+  const [time, setTime] = useState('');
 
   useEffect(() => {
     if (isOpen) {
       setLabel('');
       setSeller(initialTo || '');
       setAmount(initialAmount || '');
-      setDeadline(DEADLINE_OPTIONS[2]);
+      const d = new Date(Date.now() + 604800000); // default: 1 week out
+      setDate(d.toISOString().slice(0, 10));
+      setTime(d.toTimeString().slice(0, 5));
     }
   }, [isOpen]);
 
-  const isValid = label.trim().length > 0 && seller.trim().length > 0 && parseFloat(amount) > 0;
+  const deadlineAt = date && time ? new Date(`${date}T${time}`).getTime() : 0;
+  const deadlineSeconds = deadlineAt > Date.now() ? Math.floor((deadlineAt - Date.now()) / 1000) : 0;
+  const isValid = label.trim().length > 0 && seller.trim().length > 0 && parseFloat(amount) > 0 && deadlineSeconds > 0;
 
   return (
     <AnimatePresence>
@@ -88,22 +85,23 @@ export default function EscrowModal({ isOpen, initialTo, initialAmount, availabl
             </div>
 
             <div className="mb-6">
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">REFUND IF NOT RELEASED WITHIN</label>
-              <div className="grid grid-cols-3 gap-2">
-                {DEADLINE_OPTIONS.map((d) => (
-                  <button key={d.label} onClick={() => setDeadline(d)}
-                    className={`py-2.5 rounded-2xl text-xs font-semibold transition-all ${deadline.label === d.label ? 'bg-amber-500 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
-                    {d.label}
-                  </button>
-                ))}
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">REFUND IF NOT RELEASED BY</label>
+              <div className="flex gap-2">
+                <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
+                  className="flex-1 px-3 py-2.5 rounded-2xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:border-amber-400" />
+                <input type="time" value={time} onChange={(e) => setTime(e.target.value)}
+                  className="flex-1 px-3 py-2.5 rounded-2xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:border-amber-400" />
               </div>
+              {deadlineAt > 0 && deadlineAt <= Date.now() && (
+                <p className="text-xs text-red-500 mt-1">Pick a time in the future.</p>
+              )}
               <p className="text-xs text-slate-400 mt-2">If you don't confirm receipt by then, you can reclaim your funds anytime after.</p>
             </div>
 
             <div className="flex gap-3">
               <button onClick={onCancel} className="flex-1 py-3 rounded-2xl bg-slate-100 text-slate-600 font-semibold text-sm hover:bg-slate-200">Cancel</button>
               <button
-                onClick={() => isValid && onConfirm({ seller, amount, deadlineSeconds: deadline.seconds, label })}
+                onClick={() => isValid && onConfirm({ seller, amount, deadlineSeconds, label })}
                 disabled={!isValid}
                 className="flex-1 py-3 rounded-2xl font-bold text-sm text-white flex items-center justify-center gap-2 disabled:opacity-50"
                 style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}
