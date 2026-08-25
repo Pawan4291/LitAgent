@@ -383,7 +383,7 @@ const handleEscrowConfirm = async (data: { seller: string; amount: string; deadl
   const result = await createEscrow(data.seller, data.amount, data.deadlineSeconds, data.label);
   if (result.success) {
     addAgentMessage(
-      `✅ Funds locked! **${data.label}** — ${data.amount} zkLTC held until you confirm receipt or the deadline passes.\n\nTx: \`${result.hash}\``,
+      `✅ Funds locked! **${data.label}** — ${data.amount} zkLTC held until you confirm receipt or the deadline passes.\n\nTx: \`${result.hash}\`\n\n<a href="/automations" style="color:#d97706;font-weight:600;">→ Check your escrow here</a>`,
       { ...escrowAction!, action: 'escrow' } as AgentAction,
       result.hash,
       'confirmed'
