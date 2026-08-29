@@ -407,29 +407,33 @@ const formatInterval = (s: any) => {
           </div>
         )}
 
-        {tab === 'escrow' && sellerEscrows.some((e) => Number(e.status) === 0) && (
+        {tab === 'escrow' && <div className="grid md:grid-cols-2 gap-4">
+
           <div className="bg-white/80 rounded-3xl border border-slate-100 shadow-xl p-5">
             <h2 className="text-sm font-bold text-slate-700 mb-4">📤 Escrows You Need to Deliver</h2>
-            <div className="space-y-3">
-              {sellerEscrows.filter((e) => Number(e.status) === 0).map((e, i) => (
-                <div key={i} className="p-4 rounded-2xl border bg-blue-50 border-blue-200 flex items-start justify-between">
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-slate-600">{e.label}</p>
-                    <p className="text-sm font-semibold text-slate-700">
-                      {(Number(e.amount) / 1e18)} zkLTC from <span className="font-mono text-xs">{e.buyer.slice(0,8)}...{e.buyer.slice(-4)}</span>
-                    </p>
+            {sellerEscrows.filter((e) => Number(e.status) === 0).length === 0 ? (
+              <p className="text-sm text-slate-400 text-center py-6">Nothing to deliver right now.</p>
+            ) : (
+              <div className="space-y-3">
+                {sellerEscrows.filter((e) => Number(e.status) === 0).map((e, i) => (
+                  <div key={i} className="p-4 rounded-2xl border bg-blue-50 border-blue-200 flex items-start justify-between">
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-slate-600">{e.label}</p>
+                      <p className="text-sm font-semibold text-slate-700">
+                        {(Number(e.amount) / 1e18)} zkLTC from <span className="font-mono text-xs">{e.buyer.slice(0,8)}...{e.buyer.slice(-4)}</span>
+                      </p>
+                    </div>
+                    <button onClick={() => handleSubmitDelivery(wallet.account!, e.buyer, e.label)}
+                      className="px-3 py-1.5 rounded-xl bg-blue-500 text-white text-xs font-semibold hover:bg-blue-600 flex-shrink-0">
+                      Submit Work
+                    </button>
                   </div>
-                  <button onClick={() => handleSubmitDelivery(wallet.account!, e.buyer, e.label)}
-                    className="px-3 py-1.5 rounded-xl bg-blue-500 text-white text-xs font-semibold hover:bg-blue-600 flex-shrink-0">
-                    Submit Work
-                  </button>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
-        )}
 
-        {tab === 'escrow' && <div className="bg-white/80 rounded-3xl border border-slate-100 shadow-xl p-5">
+          <div className="bg-white/80 rounded-3xl border border-slate-100 shadow-xl p-5">
           <h2 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-amber-500" /> Escrow Payments
           </h2>
@@ -479,6 +483,8 @@ const formatInterval = (s: any) => {
               })}
             </div>
           )}
+          </div>
+
         </div>}
 
       </div>
