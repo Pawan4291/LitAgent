@@ -264,7 +264,7 @@ if (settings.requireConfirm !== false && !isTrusted) {
 
         case 'help': {
           addAgentMessage(
-            `🤖 **LitAgent** — Your AI wallet assistant on LitVM LiteForge Testnet\n\n**I can help you:**\n\n💸 **Send zkLTC** — *"Send 0.5 zkLTC to 0x742d..."*\n💰 **Check balance** — *"What's my balance?"*\n📜 **View history** — *"Show my transactions"*\n⏰ **Schedule transfers** — *"Send 0.01 zkLTC to 0x... every day"*\n📊 **Spending stats** — *"Analyze my spending"*\n\n🔒 Your private key is **never** stored — you always sign with MetaMask.\n\nPowered by **Groq AI** + **LitVM LiteForge** ⚡`,
+            `🤖 **LitAgent** — Your AI wallet assistant on LitVM LiteForge Testnet\n\n**I can help you:**\n\n💸 **Send zkLTC** — *"Send 0.5 zkLTC to 0x742d..."*\n💰 **Check balance** — *"What's my balance?"*\n📜 **View history** — *"Show my transactions"*\n👥 **Split payments** — *"Split 0.1 zkLTC between two wallets"*\n📤 **Bulk payouts** — *"Bulk pay 5 wallets"*\n⏰ **Schedule transfers** — *"Send 0.01 zkLTC to 0x... every day"*\n🔔 **Payment reminders** — *"Remind me to pay rent"*\n🛡️ **Escrow payments** — *"Escrow 0.1 zkLTC for freelance work"*\n📊 **Spending stats** — *"Analyze my spending"*\n\n🔒 Your private key is **never** stored — you always sign with MetaMask.\n\nPowered by **Groq AI** + **LitVM LiteForge** ⚡`,
             action
           );
           break;
