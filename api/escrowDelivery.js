@@ -35,16 +35,20 @@ export default async function handler(req, res) {
       await fetch(`${UPSTASH_URL}/sadd/escrowDelivery:buyer:${record.buyer}/${id}`, {
         headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
       });
+      await fetch(`${UPSTASH_URL}/sadd/escrowDelivery:seller:${record.seller}/${id}`, {
+        headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
+      });
 
       res.status(200).json({ success: true, id });
       return;
     }
 
     if (req.method === 'GET') {
-      const { buyer } = req.query;
-      if (!buyer) { res.status(400).json({ error: 'Missing buyer' }); return; }
+      const { buyer, seller } = req.query;
+      if (!buyer && !seller) { res.status(400).json({ error: 'Missing buyer or seller' }); return; }
 
-      const membersRes = await fetch(`${UPSTASH_URL}/smembers/escrowDelivery:buyer:${buyer.toLowerCase()}`, {
+      const key = buyer ? `escrowDelivery:buyer:${buyer.toLowerCase()}` : `escrowDelivery:seller:${seller.toLowerCase()}`;
+      const membersRes = await fetch(`${UPSTASH_URL}/smembers/${key}`, {
         headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
       });
       const membersData = await membersRes.json();

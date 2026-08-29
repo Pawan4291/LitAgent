@@ -10,7 +10,7 @@ import { BellRing, Zap as ZapIcon } from 'lucide-react';
 import { getReminders, deleteReminder, markReminderPaid, ReminderRecord } from '../services/reminders';
 import { ShieldCheck } from 'lucide-react';
 import { getBuyerEscrows, getSellerEscrows, releaseEscrow, refundEscrow } from '../services/ethers';
-import { submitDelivery, getDeliveriesForBuyer, EscrowDeliveryRecord } from '../services/escrowDelivery';
+import { submitDelivery, getDeliveriesForBuyer, getDeliveriesBySeller, EscrowDeliveryRecord } from '../services/escrowDelivery';
 
 export default function Automations() {
   const [contractBalance, setContractBalance] = useState('0');
@@ -30,22 +30,32 @@ export default function Automations() {
   const [escrowActionId, setEscrowActionId] = useState<number | null>(null);
   const [sellerEscrows, setSellerEscrows] = useState<any[]>([]);
   const [deliveries, setDeliveries] = useState<EscrowDeliveryRecord[]>([]);
+  const [mySubmissions, setMySubmissions] = useState<EscrowDeliveryRecord[]>([]);
 
   const refreshSellerEscrows = useCallback(() => {
     if (wallet.account) getSellerEscrows(wallet.account).then((records) => setSellerEscrows([...records].reverse()));
   }, [wallet.account]);
 
   const refreshDeliveries = useCallback(() => {
-    if (wallet.account) getDeliveriesForBuyer(wallet.account).then(setDeliveries);
+    if (wallet.account) getDeliveriesForBuyer(wallet.account).then((records) => {
+      setDeliveries([...records].sort((a, b) => b.submittedAt - a.submittedAt));
+    });
   }, [wallet.account]);
 
-  useEffect(() => { refreshSellerEscrows(); refreshDeliveries(); }, [refreshSellerEscrows, refreshDeliveries]);
+  const refreshMySubmissions = useCallback(() => {
+    if (wallet.account) getDeliveriesBySeller(wallet.account).then(setMySubmissions);
+  }, [wallet.account]);
+
+  useEffect(() => { refreshSellerEscrows(); refreshDeliveries(); refreshMySubmissions(); }, [refreshSellerEscrows, refreshDeliveries, refreshMySubmissions]);
+
+  const alreadySubmitted = (buyer: string, label: string) =>
+    mySubmissions.some((d) => d.buyer.toLowerCase() === buyer.toLowerCase() && d.label === label);
 
   const handleSubmitDelivery = async (seller: string, buyer: string, label: string) => {
     const note = window.prompt('Paste a link or note describing the delivered work:');
     if (!note) return;
     const ok = await submitDelivery(seller, buyer, note, label);
-    if (ok) alert('Delivery submitted! The buyer will see it.');
+    if (ok) { alert('Delivery submitted! The buyer will see it.'); refreshMySubmissions(); }
   };
 
   const refreshEscrows = useCallback(() => {
@@ -391,22 +401,6 @@ const formatInterval = (s: any) => {
           )}
         </div>}
 
-        {tab === 'escrow' && deliveries.length > 0 && (
-          <div className="bg-emerald-50 rounded-3xl border border-emerald-200 shadow-sm p-5">
-            <h2 className="text-sm font-bold text-emerald-700 mb-3">📦 Work Submitted To You</h2>
-            <div className="space-y-2">
-              {deliveries.map((d) => (
-                <div key={d.id} className="p-3 rounded-2xl bg-white border border-emerald-100">
-                  <p className="text-xs text-slate-500 mb-1">From <span className="font-mono">{d.seller.slice(0,8)}...{d.seller.slice(-4)}</span>{d.label ? ` — ${d.label}` : ''}</p>
-                  <p className="text-sm text-slate-700 break-all">{d.note}</p>
-                  <p className="text-xs text-slate-400 mt-1">{new Date(d.submittedAt).toLocaleString()}</p>
-                </div>
-              ))}
-            </div>
-            <p className="text-xs text-emerald-600 mt-2">Check the matching escrow below and click Release Funds if you're satisfied.</p>
-          </div>
-        )}
-
         {tab === 'escrow' && <div className="grid md:grid-cols-2 gap-4">
 
           <div className="bg-white/80 rounded-3xl border border-slate-100 shadow-xl p-5">
@@ -424,8 +418,9 @@ const formatInterval = (s: any) => {
                       </p>
                     </div>
                     <button onClick={() => handleSubmitDelivery(wallet.account!, e.buyer, e.label)}
-                      className="px-3 py-1.5 rounded-xl bg-blue-500 text-white text-xs font-semibold hover:bg-blue-600 flex-shrink-0">
-                      Submit Work
+                      disabled={alreadySubmitted(e.buyer, e.label)}
+                      className="px-3 py-1.5 rounded-xl bg-blue-500 text-white text-xs font-semibold hover:bg-blue-600 flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-300">
+                      {alreadySubmitted(e.buyer, e.label) ? 'Submitted' : 'Submit Work'}
                     </button>
                   </div>
                 ))}
@@ -486,6 +481,22 @@ const formatInterval = (s: any) => {
           </div>
 
         </div>}
+
+        {tab === 'escrow' && deliveries.length > 0 && (
+          <div className="bg-emerald-50 rounded-3xl border border-emerald-200 shadow-sm p-5">
+            <h2 className="text-sm font-bold text-emerald-700 mb-3">📦 Work Submitted To You</h2>
+            <div className="space-y-2">
+              {deliveries.map((d) => (
+                <div key={d.id} className="p-3 rounded-2xl bg-white border border-emerald-100">
+                  <p className="text-xs text-slate-500 mb-1">From <span className="font-mono">{d.seller.slice(0,8)}...{d.seller.slice(-4)}</span>{d.label ? ` — ${d.label}` : ''}</p>
+                  <p className="text-sm text-slate-700 break-all">{d.note}</p>
+                  <p className="text-xs text-slate-400 mt-1">{new Date(d.submittedAt).toLocaleString()}</p>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-emerald-600 mt-2">Check the matching escrow above and click Release Funds if you're satisfied.</p>
+          </div>
+        )}
 
       </div>
     </div>

@@ -30,3 +30,13 @@ export async function getDeliveriesForBuyer(buyer: string): Promise<EscrowDelive
     return [];
   }
 }
+
+export async function getDeliveriesBySeller(seller: string): Promise<EscrowDeliveryRecord[]> {
+  try {
+    const res = await fetch(`/api/escrowDelivery?seller=${seller}`);
+    const data = await res.json();
+    return data.success ? data.records : [];
+  } catch {
+    return [];
+  }
+}
