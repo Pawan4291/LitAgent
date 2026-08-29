@@ -9,7 +9,8 @@ import { LITVM_CHAIN } from '../config/litvm';
 import { BellRing, Zap as ZapIcon } from 'lucide-react';
 import { getReminders, deleteReminder, markReminderPaid, ReminderRecord } from '../services/reminders';
 import { ShieldCheck } from 'lucide-react';
-import { getBuyerEscrows, releaseEscrow, refundEscrow } from '../services/ethers';
+import { getBuyerEscrows, getSellerEscrows, releaseEscrow, refundEscrow } from '../services/ethers';
+import { submitDelivery, getDeliveriesForBuyer, EscrowDeliveryRecord } from '../services/escrowDelivery';
 
 export default function Automations() {
   const [contractBalance, setContractBalance] = useState('0');
@@ -27,6 +28,25 @@ export default function Automations() {
   const [tab, setTab] = useState<'schedule' | 'reminders' | 'escrow'>('schedule');
   const [escrows, setEscrows] = useState<any[]>([]);
   const [escrowActionId, setEscrowActionId] = useState<number | null>(null);
+  const [sellerEscrows, setSellerEscrows] = useState<any[]>([]);
+  const [deliveries, setDeliveries] = useState<EscrowDeliveryRecord[]>([]);
+
+  const refreshSellerEscrows = useCallback(() => {
+    if (wallet.account) getSellerEscrows(wallet.account).then((records) => setSellerEscrows([...records].reverse()));
+  }, [wallet.account]);
+
+  const refreshDeliveries = useCallback(() => {
+    if (wallet.account) getDeliveriesForBuyer(wallet.account).then(setDeliveries);
+  }, [wallet.account]);
+
+  useEffect(() => { refreshSellerEscrows(); refreshDeliveries(); }, [refreshSellerEscrows, refreshDeliveries]);
+
+  const handleSubmitDelivery = async (seller: string, buyer: string, label: string) => {
+    const note = window.prompt('Paste a link or note describing the delivered work:');
+    if (!note) return;
+    const ok = await submitDelivery(seller, buyer, note, label);
+    if (ok) alert('Delivery submitted! The buyer will see it.');
+  };
 
   const refreshEscrows = useCallback(() => {
     if (wallet.account) getBuyerEscrows(wallet.account).then((records) => setEscrows([...records].reverse()));
@@ -370,6 +390,44 @@ const formatInterval = (s: any) => {
             </div>
           )}
         </div>}
+
+        {tab === 'escrow' && deliveries.length > 0 && (
+          <div className="bg-emerald-50 rounded-3xl border border-emerald-200 shadow-sm p-5">
+            <h2 className="text-sm font-bold text-emerald-700 mb-3">📦 Work Submitted To You</h2>
+            <div className="space-y-2">
+              {deliveries.map((d) => (
+                <div key={d.id} className="p-3 rounded-2xl bg-white border border-emerald-100">
+                  <p className="text-xs text-slate-500 mb-1">From <span className="font-mono">{d.seller.slice(0,8)}...{d.seller.slice(-4)}</span>{d.label ? ` — ${d.label}` : ''}</p>
+                  <p className="text-sm text-slate-700 break-all">{d.note}</p>
+                  <p className="text-xs text-slate-400 mt-1">{new Date(d.submittedAt).toLocaleString()}</p>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-emerald-600 mt-2">Check the matching escrow below and click Release Funds if you're satisfied.</p>
+          </div>
+        )}
+
+        {tab === 'escrow' && sellerEscrows.some((e) => Number(e.status) === 0) && (
+          <div className="bg-white/80 rounded-3xl border border-slate-100 shadow-xl p-5">
+            <h2 className="text-sm font-bold text-slate-700 mb-4">📤 Escrows You Need to Deliver</h2>
+            <div className="space-y-3">
+              {sellerEscrows.filter((e) => Number(e.status) === 0).map((e, i) => (
+                <div key={i} className="p-4 rounded-2xl border bg-blue-50 border-blue-200 flex items-start justify-between">
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-slate-600">{e.label}</p>
+                    <p className="text-sm font-semibold text-slate-700">
+                      {(Number(e.amount) / 1e18)} zkLTC from <span className="font-mono text-xs">{e.buyer.slice(0,8)}...{e.buyer.slice(-4)}</span>
+                    </p>
+                  </div>
+                  <button onClick={() => handleSubmitDelivery(wallet.account!, e.buyer, e.label)}
+                    className="px-3 py-1.5 rounded-xl bg-blue-500 text-white text-xs font-semibold hover:bg-blue-600 flex-shrink-0">
+                    Submit Work
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {tab === 'escrow' && <div className="bg-white/80 rounded-3xl border border-slate-100 shadow-xl p-5">
           <h2 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
