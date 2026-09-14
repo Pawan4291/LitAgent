@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
-export const CLAUDE_API_URL = "https://agentrouter.org/v1/chat/completions";
-export const CLAUDE_MODEL = "gpt-5";
-export const GROQ_API_KEY = import.meta.env.VITE_AGENTROUTER_API_KEY || "";
+export const CLAUDE_API_URL = "https://api.groq.com/openai/v1/chat/completions";
+export const CLAUDE_MODEL = "openai/gpt-oss-120b";
+export const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY || "";
 
 // Goldsky — fallback to RPC if subgraph not deployed
 export const GOLDSKY_PROJECT_ID = "litvm-liteforge";
