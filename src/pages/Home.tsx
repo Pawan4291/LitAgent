@@ -25,6 +25,8 @@ import ReminderModal from '../components/ReminderModal';
 import { createReminder, getReminders, snoozeReminder, ReminderRecord } from '../services/reminders';
 import EscrowModal from '../components/EscrowModal';
 import { createEscrow } from '../services/ethers';
+import OnboardingWizard from '../components/OnboardingWizard';
+import { getOnboardingState } from '../services/onboarding';
 
 const WELCOME_MESSAGES = [
   "What's my zkLTC balance?",
@@ -49,6 +51,8 @@ export default function Home() {
   const [dueReminders, setDueReminders] = useState<ReminderRecord[]>([]);
   const [showEscrow, setShowEscrow] = useState(false);
   const [escrowAction, setEscrowAction] = useState<AgentAction | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState(0);
  const wallet = useWalletContext();
   const { messages, isThinking, processMessage, addAgentMessage, clearHistory } = useAgent();
   const { transactions, fetchTransactions } = useTransactions();
@@ -60,6 +64,20 @@ export default function Home() {
   const [estimatedGas, setEstimatedGas] = useState<string>('');
   const [welcomeIdx, setWelcomeIdx] = useState(0);
   const [templates, setTemplates] = useState<TemplateRecord[]>([]);
+
+  useEffect(() => {
+    if (wallet.account) {
+      getOnboardingState(wallet.account).then((state) => {
+        if (!state.completed) {
+          setOnboardingStep(Math.max(state.step, 1));
+          setShowOnboarding(true);
+        }
+      });
+    } else {
+      setShowOnboarding(true);
+      setOnboardingStep(0);
+    }
+  }, [wallet.account]);
 
   const refreshTemplates = useCallback(() => {
     if (wallet.account) getTemplates(wallet.account).then(setTemplates);
@@ -418,6 +436,16 @@ const handleSplitConfirm = async (data: { description: string; recipients: { add
 
   return (
     <div className="flex flex-col h-[calc(100vh-64px)] md:h-[calc(100vh-72px)]">
+      {showOnboarding && (
+        <OnboardingWizard
+          isConnected={wallet.isConnected}
+          balance={wallet.balance}
+          account={wallet.account}
+          startStep={onboardingStep}
+          onConnect={wallet.connect}
+          onFinished={() => setShowOnboarding(false)}
+        />
+      )}
       {isLowBalance && !bannerDismissed && (
         <div className="relative flex items-center justify-center px-4 py-2.5 bg-red-50 border-b border-red-200 flex-shrink-0">
           <p className="text-xs font-semibold text-red-600 text-center">
