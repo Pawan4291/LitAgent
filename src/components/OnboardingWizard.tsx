@@ -32,6 +32,14 @@ export default function OnboardingWizard({ isConnected, balance, account, startS
 
   useEffect(() => setStep(startStep), [startStep]);
 
+  // Auto-advance from step 0 once wallet is connected
+  useEffect(() => {
+    if (isConnected && step === 0) {
+      setStep(1);
+      if (account) setOnboardingState(account, 1, false);
+    }
+  }, [isConnected, step, account]);
+
   const goTo = (s: number) => {
     setStep(s);
     if (account) setOnboardingState(account, s, false);
