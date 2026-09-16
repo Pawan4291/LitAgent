@@ -26,7 +26,7 @@ import { createReminder, getReminders, snoozeReminder, ReminderRecord } from '..
 import EscrowModal from '../components/EscrowModal';
 import { createEscrow } from '../services/ethers';
 import OnboardingWizard from '../components/OnboardingWizard';
-import { getOnboardingState } from '../services/onboarding';
+import { getOnboardingState, setOnboardingState } from '../services/onboarding';
 
 const WELCOME_MESSAGES = [
   "What's my zkLTC balance?",
@@ -66,18 +66,18 @@ export default function Home() {
   const [templates, setTemplates] = useState<TemplateRecord[]>([]);
 
   useEffect(() => {
-    if (wallet.account) {
-      getOnboardingState(wallet.account).then((state) => {
-        if (!state.completed) {
-          setOnboardingStep(Math.max(state.step, 1));
-          setShowOnboarding(true);
-        }
-      });
-    } else {
+    if (!wallet.account) return;
+    getOnboardingState(wallet.account).then((state) => {
+      if (state.completed) return;
+      // Existing users (already have funds) skip onboarding entirely
+      if (parseFloat(wallet.balance) > 0) {
+        setOnboardingState(wallet.account!, 4, true);
+        return;
+      }
+      setOnboardingStep(Math.max(state.step, 1));
       setShowOnboarding(true);
-      setOnboardingStep(0);
-    }
-  }, [wallet.account]);
+    });
+  }, [wallet.account, wallet.balance]);
 
   const refreshTemplates = useCallback(() => {
     if (wallet.account) getTemplates(wallet.account).then(setTemplates);

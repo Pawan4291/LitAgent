@@ -67,7 +67,7 @@ export default function OnboardingWizard({ isConnected, balance, account, startS
         animate={{ opacity: 1, scale: 1, y: 0 }}
         className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl p-6"
       >
-        <button onClick={finish} className="absolute top-4 right-4 text-slate-300 hover:text-slate-500">
+        <button onClick={finish} title="Skip setup" className="absolute top-4 right-4 text-slate-300 hover:text-slate-500">
           <X className="w-4 h-4" />
         </button>
 
