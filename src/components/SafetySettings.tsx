@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Shield, Plus, Trash2, Save, Key, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Shield, Plus, Trash2, Save, Key, AlertTriangle, CheckCircle, Mail, Send as TelegramIcon } from 'lucide-react';
 import { STORAGE_KEYS, DEFAULT_DAILY_LIMIT, MAX_DAILY_SEND_LIMIT } from '../config/constants';
 import { isValidAddress } from '../services/ethers';
+import { useWalletContext } from './WalletContext';
+import { getNotifyPrefs, saveNotifyPrefs } from '../services/notifyPrefs';
 
 interface Settings {
   dailyLimit: number;
@@ -12,6 +14,7 @@ interface Settings {
 }
 
 export default function SafetySettings() {
+  const wallet = useWalletContext();
   const [settings, setSettings] = useState<Settings>({
     dailyLimit: DEFAULT_DAILY_LIMIT,
     whitelist: [],
@@ -22,6 +25,8 @@ export default function SafetySettings() {
   const [saved, setSaved] = useState(false);
   const [addressError, setAddressError] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
+  const [email, setEmail] = useState('');
+  const [telegramChatId, setTelegramChatId] = useState('');
 
   useEffect(() => {
     try {
@@ -30,8 +35,19 @@ export default function SafetySettings() {
     } catch {}
   }, []);
 
-  const save = () => {
+  useEffect(() => {
+    if (!wallet.account) return;
+    getNotifyPrefs(wallet.account).then((prefs) => {
+      setEmail(prefs.email || '');
+      setTelegramChatId(prefs.telegramChatId || '');
+    });
+  }, [wallet.account]);
+
+  const save = async () => {
     localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+    if (wallet.account) {
+      await saveNotifyPrefs(wallet.account, email || null, telegramChatId || null, settings.lowBalanceThreshold);
+    }
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   };
@@ -160,6 +176,51 @@ export default function SafetySettings() {
             className="w-28 px-3 py-2 rounded-xl border-2 border-slate-200 bg-white text-sm font-bold text-rose-600 text-center focus:outline-none focus:border-rose-400"
           />
           <span className="text-xs font-semibold text-purple-600">zkLTC</span>
+        </div>
+      </motion.div>
+
+      {/* Notification channels */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.13 }}
+        className="p-5 rounded-2xl bg-white/80 border border-slate-200 shadow-sm"
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-400 to-blue-500 flex items-center justify-center shadow-md">
+            <Mail className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-slate-800">Notifications</h3>
+            <p className="text-xs text-slate-500">Get reminders & alerts outside the app</p>
+          </div>
+        </div>
+
+        <div className="mb-3">
+          <label className="text-xs font-semibold text-slate-500 mb-1 block">EMAIL</label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@example.com"
+            className="w-full px-3 py-2.5 rounded-xl border-2 border-slate-200 bg-white/80 text-sm focus:outline-none focus:border-indigo-400"
+          />
+        </div>
+
+        <div>
+          <label className="text-xs font-semibold text-slate-500 mb-1 flex items-center gap-1">
+            <TelegramIcon className="w-3 h-3" /> TELEGRAM CHAT ID
+          </label>
+          <input
+            type="text"
+            value={telegramChatId}
+            onChange={(e) => setTelegramChatId(e.target.value)}
+            placeholder="e.g. 123456789"
+            className="w-full px-3 py-2.5 rounded-xl border-2 border-slate-200 bg-white/80 text-sm font-mono focus:outline-none focus:border-indigo-400"
+          />
+          <p className="text-xs text-slate-400 mt-1">
+            Message our bot on Telegram, then send <code className="bg-slate-100 px-1 rounded">/start</code> — it'll reply with your chat ID to paste here.
+          </p>
         </div>
       </motion.div>
 
