@@ -219,7 +219,7 @@ export default function SafetySettings() {
             className="w-full px-3 py-2.5 rounded-xl border-2 border-slate-200 bg-white/80 text-sm font-mono focus:outline-none focus:border-indigo-400"
           />
           <p className="text-xs text-slate-400 mt-1">
-            Message our bot on Telegram, then send <code className="bg-slate-100 px-1 rounded">/start</code> — it'll reply with your chat ID to paste here.
+            Message <a href="https://t.me/Lit_AgentBot" target="_blank" rel="noreferrer" className="text-indigo-500 font-semibold hover:underline">@Lit_AgentBot</a> on Telegram, then send <code className="bg-slate-100 px-1 rounded">/start</code> — it'll reply with your chat ID to paste here.
           </p>
         </div>
       </motion.div>
