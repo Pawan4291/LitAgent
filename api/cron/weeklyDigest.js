@@ -188,7 +188,7 @@ export default async function handler(req, res) {
         if (!prefs || (!prefs.email && !prefs.telegramChatId)) continue;
 
         const stats = await gatherStats(owner, provider);
-        if (!hasActivity(stats)) {
+        if (!hasActivity(stats) && req.query.force !== '1') {
           skipped++;
           continue;
         }
@@ -206,7 +206,7 @@ export default async function handler(req, res) {
       }
     }
 
-    res.status(200).json({ success: true, checked, sent, skipped });
+    res.status(200).json({ success: true, checked, sent, skipped, force: req.query.force || null });
   } catch (e) {
     console.error('Weekly digest error:', e);
     res.status(500).json({ error: e.message });
