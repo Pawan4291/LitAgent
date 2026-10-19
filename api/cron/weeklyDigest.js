@@ -139,6 +139,8 @@ function formatStats(s) {
   return lines.join('\n');
 }
 
+let lastInsightError = null;
+
 async function generateInsight(statsText) {
   try {
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -149,7 +151,8 @@ async function generateInsight(statsText) {
       },
       body: JSON.stringify({
         model: 'openai/gpt-oss-120b',
-        max_tokens: 300,
+        max_tokens: 1500,
+        reasoning_effort: 'low',
         messages: [
           {
             role: 'user',
@@ -158,10 +161,16 @@ async function generateInsight(statsText) {
         ],
       }),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      lastInsightError = `Groq HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`;
+      return null;
+    }
     const data = await res.json();
-    return data.choices?.[0]?.message?.content?.trim() || null;
-  } catch {
+    const text = data.choices?.[0]?.message?.content?.trim();
+    if (!text) lastInsightError = `Groq returned empty content (finish_reason: ${data.choices?.[0]?.finish_reason})`;
+    return text || null;
+  } catch (e) {
+    lastInsightError = `Fetch failed: ${e.message}`;
     return null;
   }
 }
@@ -206,7 +215,7 @@ export default async function handler(req, res) {
       }
     }
 
-    res.status(200).json({ success: true, checked, sent, skipped, force: req.query.force || null });
+    res.status(200).json({ success: true, checked, sent, skipped, force: req.query.force || null, insightError: req.query.force === '1' ? lastInsightError : undefined });
   } catch (e) {
     console.error('Weekly digest error:', e);
     res.status(500).json({ error: e.message });
