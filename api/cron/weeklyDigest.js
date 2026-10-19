@@ -10,9 +10,11 @@ const ESCROW_ABI = [
   'function getBuyerEscrows(address _buyer) view returns (tuple(address buyer, address seller, uint256 amount, uint256 deadline, string label, uint8 status)[])',
 ];
 
+let emailStatus = 'no email saved in Settings';
+
 async function sendEmail(to, subject, text) {
   try {
-    await fetch('https://api.resend.com/emails', {
+    const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
@@ -20,11 +22,13 @@ async function sendEmail(to, subject, text) {
       },
       body: JSON.stringify({ from: 'LitAgent <notifications@litagent.online>', to, subject, text }),
     });
+    emailStatus = res.ok
+      ? `accepted by Resend (HTTP ${res.status})`
+      : `Resend HTTP ${res.status}: ${(await res.text()).slice(0, 300)}`;
   } catch (e) {
-    console.error('Email send error:', e);
+    emailStatus = `Fetch failed: ${e.message}`;
   }
 }
-
 async function sendTelegram(chatId, text) {
   try {
     await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
@@ -147,7 +151,7 @@ async function generateInsight(statsText) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.VITE_GROQ_API_KEY}`,
+        Authorization: `Bearer ${process.env.GROQ_API_KEY || process.env.VITE_GROQ_API_KEY}`,
       },
       body: JSON.stringify({
         model: 'openai/gpt-oss-120b',
@@ -215,7 +219,7 @@ export default async function handler(req, res) {
       }
     }
 
-    res.status(200).json({ success: true, checked, sent, skipped, force: req.query.force || null, insightError: req.query.force === '1' ? lastInsightError : undefined });
+    res.status(200).json({ success: true, checked, sent, skipped, force: req.query.force || null, insightError: req.query.force === '1' ? lastInsightError : undefined, emailStatus: req.query.force === '1' ? emailStatus : undefined });
   } catch (e) {
     console.error('Weekly digest error:', e);
     res.status(500).json({ error: e.message });
